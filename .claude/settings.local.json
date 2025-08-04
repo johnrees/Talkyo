@@ -27,7 +27,8 @@
       "WebFetch(domain:huggingface.co)",
       "WebFetch(domain:github.com)",
       "mcp__XcodeBuildMCP__clean_proj",
-      "mcp__XcodeBuildMCP__start_device_log_cap"
+      "mcp__XcodeBuildMCP__start_device_log_cap",
+      "Bash(true)"
     ],
     "deny": []
   }

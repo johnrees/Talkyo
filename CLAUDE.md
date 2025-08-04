@@ -1,124 +1,63 @@
 # Talkyo - iOS Japanese Voice Transcription App
 
-## Project Overview
-Talkyo is an iOS application that transcribes Japanese speech in real-time using WhisperKit and Core ML. The app features a push-to-talk interface for recording audio and displays the transcribed Japanese text with furigana readings for kanji and katakana.
+## Overview
+Talkyo is a simple iOS app for Japanese speech transcription using WhisperKit. It features push-to-talk recording, real-time transcription, and automatic furigana generation.
 
-## Core Features
+## Architecture
 
-### 1. Push-to-Talk Recording
-- Hold button to record Japanese speech
-- Release button to stop recording and trigger transcription
-- Visual feedback with color change (blue → red) when recording
-- Clear previous transcription when starting new recording
+### ContentView.swift
+- Main UI with push-to-talk button
+- Displays transcription results
+- Shows playback button when recording exists
 
-### 2. Real-time Japanese Transcription
-- Uses WhisperKit with Whisper "base" model for accurate Japanese recognition
-- Forced Japanese language detection to prevent misrecognition
-- Displays transcription time in milliseconds
-- Optimized for iOS devices with on-device processing
+### TranscriptionService.swift
+- Coordinates between audio recording and transcription
+- Manages app state and UI updates
+- Handles timing and error cases
 
-### 3. Furigana Support
-- Automatically generates hiragana readings for kanji characters
-- Shows hiragana readings for katakana words (e.g., カナダ → かなだ)
-- Hides furigana for text already in hiragana
-- Displayed in smaller gray text below the main transcription
+### WhisperModelHandler.swift
+- Wraps WhisperKit for Japanese transcription
+- Loads and manages the Whisper model
+- Configures optimal settings for Japanese
 
-### 4. User Interface
-- Clean, minimalist design with large microphone button
-- Transcribed text displayed in large font (32pt)
-- Furigana readings in smaller font (16pt) below
-- Transcription time shown in blue (e.g., "412ms")
-- Placeholder text "話してください" when no transcription
+### AudioRecorder.swift
+- Handles audio recording and playback
+- Converts audio to 16kHz for Whisper
+- Saves recordings as WAV files
+- Plays system beeps before/after recording
+- 0.5s delay after start beep to prevent audio bleed
 
-## Technical Implementation
+### FuriganaGenerator.swift
+- Generates hiragana readings for kanji
+- Uses iOS Japanese tokenizer
+- Filters out unnecessary furigana
 
-### Platform
-- iOS (Swift)
-- Target iOS 18.0+
-- SwiftUI for modern UI development
+## Key Features
 
-### Architecture
-- SwiftUI for modern declarative UI
-- Combine framework for reactive state management
-- AVAudioEngine for audio recording
-- WhisperKit for speech recognition
-- CoreText and CFStringTransform for furigana generation
+1. **Push-to-Talk**: Hold button to record, release to transcribe
+2. **Japanese Optimization**: Forced Japanese language detection
+3. **Furigana Support**: Automatic readings for kanji/katakana
+4. **Playback**: Review recordings after transcription
+5. **Audio Feedback**: Beep sounds indicate recording start/stop
 
-### Key Components
-1. **ContentView.swift**: Main UI with push-to-talk button and text display
-2. **TranscriptionManager.swift**: Handles audio recording and WhisperKit integration
-3. **WhisperModelHandler.swift**: Manages WhisperKit model loading and transcription
-4. **Audio Processing**: 
-   - Records at device's native sample rate
-   - Converts to 16kHz for Whisper model compatibility
-   - Uses AVAudioConverter for format conversion
+## Technical Notes
 
-### Dependencies
-- **WhisperKit**: Swift package for on-device Whisper speech recognition
-  - GitHub: https://github.com/argmaxinc/WhisperKit
-  - Model: "base" (approximately 150MB)
-  - Supports Japanese transcription out of the box
+### Audio Recording
+- Uses system sounds 1113 (start) and 1114 (stop) for beeps
+- 0.5 second delay after start beep prevents audio bleeding into recording
+- Recording at 16kHz mono for Whisper compatibility
+- Audio saved as WAV files in documents directory
 
 ## Development Guidelines
 
-### Code Style
-- Follow Swift API Design Guidelines
-- Use descriptive variable and function names
-- Implement proper error handling
-- Write unit tests for core functionality
-
-### UI/UX Principles
-- Minimalist design focused on learning
-- High contrast for readability
-- Smooth animations that don't distract from learning
-- Intuitive controls for playback and navigation
-
-### Accessibility
-- VoiceOver support for navigation
-- Dynamic Type support for text sizing
-- Color contrast meeting WCAG guidelines
-
-## Current Project Structure
-```
-Talkyo/
-├── Talkyo/
-│   ├── TalkyoApp.swift          # App entry point
-│   ├── ContentView.swift        # Main UI with push-to-talk button
-│   ├── TranscriptionManager.swift # Audio recording and transcription logic
-│   ├── WhisperModelHandler.swift  # WhisperKit integration
-│   └── Assets.xcassets/         # App icons and colors
-├── Talkyo.xcodeproj/            # Xcode project file
-├── README.md                    # Setup instructions
-└── CLAUDE.md                    # This file
-```
-
-## Known Issues & Solutions
-
-### iOS Simulator
-- Audio recording crashes in iOS Simulator due to AVAudioEngine limitations
-- Solution: Test on physical iOS device with developer mode enabled
-
-### WhisperKit Model Download
-- First launch requires downloading the Whisper model (~150MB)
-- Requires internet connection for initial download
-- Model is cached locally after first download
-
-### Transcription Accuracy
-- "tiny" model is fast but has poor Japanese accuracy
-- "small" model is better but still may have issues
-- "base" model (current) provides good balance of speed and accuracy
-- "medium" model would provide best accuracy but slower
-
-## Performance Metrics
-- Transcription time: 400-600ms for short phrases with "base" model
-- Audio recording: 16kHz mono, converted from device native format
-- Memory usage: ~200MB with model loaded
+- Keep code simple and focused
+- Separate concerns into distinct classes
+- Use SwiftUI and Combine for reactive UI
+- Test on physical device (audio doesn't work in simulator)
 
 ## Future Enhancements
-- Support for multiple Whisper model sizes with user selection
-- Save transcription history
-- Export transcriptions
-- Real-time transcription (streaming)
-- Support for other languages beyond Japanese
-- Improved furigana with proper word boundaries
-- Integration with Japanese dictionaries for word lookup
+
+- Multiple model size options
+- Transcription history
+- Export functionality
+- Dictionary integration
