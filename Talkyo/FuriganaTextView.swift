@@ -3,7 +3,7 @@
 //  Talkyo
 //
 //  SwiftUI implementation for displaying furigana (ruby text) above kanji
-//  Uses a simple and reliable approach with Text overlays
+//  Uses a flexible layout that supports multi-line text
 //
 
 import SwiftUI
@@ -17,24 +17,119 @@ struct FuriganaTextView: View {
     let textColor: Color
     
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(tokens.enumerated()), id: \.offset) { _, token in
-                FuriganaCharacterView(
-                    token: token,
-                    fontSize: fontSize,
-                    textColor: textColor
-                )
+        FlexibleView(
+            data: tokens,
+            spacing: 0,
+            alignment: .center
+        ) { token in
+            FuriganaCharacterView(
+                token: token,
+                fontSize: fontSize,
+                textColor: textColor
+            )
+        }
+    }
+}
+
+// MARK: - Flexible View
+
+/// A view that arranges its children in a flow layout, wrapping to new lines as needed
+struct FlexibleView<Data: Collection, Content: View>: View where Data.Element: Hashable {
+    let data: Data
+    let spacing: CGFloat
+    let alignment: HorizontalAlignment
+    let content: (Data.Element) -> Content
+    
+    @State private var availableWidth: CGFloat = 0
+    
+    var body: some View {
+        ZStack(alignment: Alignment(horizontal: alignment, vertical: .top)) {
+            Color.clear
+                .frame(height: 1)
+                .readSize { size in
+                    availableWidth = size.width
+                }
+            
+            FlexibleViewInternal(
+                availableWidth: availableWidth,
+                data: data,
+                spacing: spacing,
+                alignment: alignment,
+                content: content
+            )
+        }
+    }
+}
+
+struct FlexibleViewInternal<Data: Collection, Content: View>: View where Data.Element: Hashable {
+    let availableWidth: CGFloat
+    let data: Data
+    let spacing: CGFloat
+    let alignment: HorizontalAlignment
+    let content: (Data.Element) -> Content
+    
+    @State private var elementsSize: [Data.Element: CGSize] = [:]
+    
+    var body: some View {
+        VStack(alignment: alignment, spacing: 10) {
+            ForEach(computeRows(), id: \.self) { rowElements in
+                HStack(spacing: spacing) {
+                    ForEach(rowElements, id: \.self) { element in
+                        content(element)
+                            .readSize { size in
+                                elementsSize[element] = size
+                            }
+                    }
+                }
             }
         }
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
     }
+    
+    private func computeRows() -> [[Data.Element]] {
+        var rows: [[Data.Element]] = [[]]
+        var currentRow = 0
+        var remainingWidth = availableWidth
+        
+        for element in data {
+            let elementSize = elementsSize[element] ?? CGSize(width: 50, height: 50)
+            
+            if remainingWidth - elementSize.width >= 0 {
+                rows[currentRow].append(element)
+                remainingWidth -= elementSize.width + spacing
+            } else {
+                currentRow += 1
+                rows.append([element])
+                remainingWidth = availableWidth - elementSize.width - spacing
+            }
+        }
+        
+        return rows
+    }
+}
+
+// MARK: - Size Reader
+
+extension View {
+    func readSize(onChange: @escaping (CGSize) -> Void) -> some View {
+        background(
+            GeometryReader { geometryProxy in
+                Color.clear
+                    .preference(key: SizePreferenceKey.self, value: geometryProxy.size)
+            }
+        )
+        .onPreferenceChange(SizePreferenceKey.self, perform: onChange)
+    }
+}
+
+private struct SizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {}
 }
 
 // MARK: - Furigana Character View
 
 /// Individual character/token view that displays furigana above the base text when needed
-private struct FuriganaCharacterView: View {
+struct FuriganaCharacterView: View {
     let token: FuriganaToken
     let fontSize: CGFloat
     let textColor: Color
@@ -52,22 +147,34 @@ private struct FuriganaCharacterView: View {
             // Display with furigana above
             VStack(spacing: 0) {
                 Text(reading)
-                    .font(.system(size: furiganaSize))
+                    .font(.custom("KosugiMaru-Regular", size: furiganaSize))
+                    .fontWeight(.semibold)
                     .foregroundColor(textColor.opacity(0.8))
-                    .lineLimit(1)
+                    .fixedSize()
                 
                 Text(token.text)
-                    .font(.system(size: fontSize))
+                    .font(.custom("KosugiMaru-Regular", size: fontSize))
+                    .fontWeight(.bold)
                     .foregroundColor(textColor)
-                    .lineLimit(1)
+                    .fixedSize()
             }
         } else {
             // Display without furigana (aligned with furigana text)
             Text(token.text)
-                .font(.system(size: fontSize))
+                .font(.custom("KosugiMaru-Regular", size: fontSize))
+                .fontWeight(.bold)
                 .foregroundColor(textColor)
-                .lineLimit(1)
+                .fixedSize()
                 .padding(.top, verticalPadding)
         }
+    }
+}
+
+// MARK: - Token Hashable Extension
+
+extension FuriganaToken: Hashable {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(text)
+        hasher.combine(reading)
     }
 }
