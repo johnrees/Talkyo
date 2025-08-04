@@ -16,6 +16,7 @@ final class TranscriptionService: ObservableObject {
     
     @Published private(set) var transcribedText = ""
     @Published private(set) var furiganaText = ""
+    @Published private(set) var furiganaTokens: [FuriganaToken] = []
     @Published private(set) var transcriptionTime = ""
     @Published private(set) var isTranscribing = false
     @Published private(set) var hasRecording = false
@@ -70,6 +71,7 @@ final class TranscriptionService: ObservableObject {
     private func clearTranscription() {
         transcribedText = ""
         furiganaText = ""
+        furiganaTokens = []
         transcriptionTime = ""
     }
     
@@ -108,12 +110,14 @@ final class TranscriptionService: ObservableObject {
     private func updateTranscription(text: String, mode: String, elapsedTime: TimeInterval) {
         transcribedText = text
         furiganaText = FuriganaGenerator.generate(for: text)
+        furiganaTokens = FuriganaGenerator.generateTokens(for: text)
         transcriptionTime = formatTranscriptionTime(elapsedTime, mode: mode)
     }
     
     private func handleTranscriptionError(_ error: Error) {
         transcribedText = "Error: \(error.localizedDescription)"
         furiganaText = ""
+        furiganaTokens = []
         transcriptionTime = ""
     }
     

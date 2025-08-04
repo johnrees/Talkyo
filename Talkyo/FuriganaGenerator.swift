@@ -24,6 +24,27 @@ enum FuriganaGenerator {
         return furiganaText == text ? "" : furiganaText
     }
     
+    static func generateTokens(for text: String) -> [FuriganaToken] {
+        let tokenizer = createJapaneseTokenizer(for: text)
+        var tokens: [FuriganaToken] = []
+        
+        var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+        
+        while tokenType != [] {
+            let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+            let startIndex = text.index(text.startIndex, offsetBy: range.location)
+            let endIndex = text.index(startIndex, offsetBy: range.length)
+            let tokenText = String(text[startIndex..<endIndex])
+            
+            let reading = extractHiraganaReading(from: tokenizer)
+            tokens.append(FuriganaToken(text: tokenText, reading: reading))
+            
+            tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+        }
+        
+        return tokens
+    }
+    
     // MARK: - Private Methods
     
     private static func textRequiresFurigana(_ text: String) -> Bool {
@@ -33,19 +54,8 @@ enum FuriganaGenerator {
     }
     
     private static func generateFuriganaText(from text: String) -> String {
-        let tokenizer = createJapaneseTokenizer(for: text)
-        var furiganaComponents: [String] = []
-        
-        var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
-        
-        while tokenType != [] {
-            if let reading = extractHiraganaReading(from: tokenizer) {
-                furiganaComponents.append(reading)
-            }
-            tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
-        }
-        
-        return furiganaComponents.joined()
+        let tokens = generateTokens(for: text)
+        return tokens.compactMap { $0.reading ?? $0.text }.joined()
     }
     
     private static func createJapaneseTokenizer(for text: String) -> CFStringTokenizer {

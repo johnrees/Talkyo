@@ -2,16 +2,16 @@
 
 ## Phase 0: Visual Improvements (Current Priority)
 
-### 0.1 Ruby Text (Furigana) Display ⭐ NEXT
-- [ ] Replace current two-line display with proper ruby text (furigana above kanji)
-- [ ] Research iOS text rendering options:
+### 0.1 Ruby Text (Furigana) Display ✅ COMPLETED
+- [x] Replace current two-line display with proper ruby text (furigana above kanji)
+- [x] Research iOS text rendering options:
   - NSAttributedString with kCTRubyAnnotationAttributeName
   - Custom SwiftUI view with Text overlays
   - Web view with HTML ruby tags (fallback option)
-- [ ] Create RubyTextView component that positions hiragana above kanji
-- [ ] Handle text wrapping and sizing appropriately
-- [ ] Ensure proper alignment between base text and ruby annotations
-- [ ] Test with various text lengths and kanji combinations
+- [x] Create RubyTextView component that positions hiragana above kanji
+- [x] Handle text wrapping and sizing appropriately
+- [x] Ensure proper alignment between base text and ruby annotations
+- [x] Test with various text lengths and kanji combinations
 
 ## Phase 1: Core Enhancements
 

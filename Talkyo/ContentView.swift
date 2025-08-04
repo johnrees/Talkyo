@@ -38,6 +38,7 @@ struct ContentView: View {
             TranscriptionDisplay(
                 transcribedText: transcriptionService.transcribedText,
                 furiganaText: transcriptionService.furiganaText,
+                furiganaTokens: transcriptionService.furiganaTokens,
                 processingTime: transcriptionService.transcriptionTime
             )
             
@@ -99,6 +100,7 @@ struct ContentView: View {
 struct TranscriptionDisplay: View {
     let transcribedText: String
     let furiganaText: String
+    let furiganaTokens: [FuriganaToken]
     let processingTime: String
     
     private let placeholderText = "話してください"
@@ -133,19 +135,28 @@ struct TranscriptionDisplay: View {
     
     private var transcriptionContent: some View {
         VStack(spacing: 12) {
-            // Original text with kanji
-            Text(transcribedText)
-                .font(.system(size: 32))
-                .multilineTextAlignment(.center)
+            if !furiganaTokens.isEmpty {
+                // Ruby text display with furigana above kanji
+                FuriganaTextView(
+                    tokens: furiganaTokens,
+                    fontSize: 32,
+                    textColor: .primary
+                )
                 .padding(.horizontal)
-            
-            // Kana reading
-            if !furiganaText.isEmpty {
-                Text(furiganaText)
-                    .font(.system(size: 20))
-                    .foregroundColor(.secondary)
+            } else {
+                // Fallback to original display if no tokens
+                Text(transcribedText)
+                    .font(.system(size: 32))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+                
+                if !furiganaText.isEmpty {
+                    Text(furiganaText)
+                        .font(.system(size: 20))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
             }
         }
     }
