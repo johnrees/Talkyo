@@ -17,7 +17,7 @@ class AudioRecorder: NSObject, ObservableObject {
     @Published var hasRecording = false
     
     private var audioData: [Float] = []
-    private var recordedFileURL: URL?
+    private(set) var recordedFileURL: URL?
     
     private let sampleRate: Double = 16000
     private let bufferSize: AVAudioFrameCount = 2048
@@ -123,7 +123,11 @@ class AudioRecorder: NSObject, ObservableObject {
         audioEngine.reset()
         audioConverter = nil
         
-        print("Recording stopped: \(audioData.count) samples")
+        let duration = Double(audioData.count) / sampleRate
+        print("📊 Recording stopped:")
+        print("   - Samples: \(audioData.count)")
+        print("   - Duration: \(String(format: "%.2f", duration)) seconds")
+        print("   - Sample rate: \(sampleRate) Hz")
         
         // Play stop beep after recording stops
         AudioServicesPlaySystemSound(stopBeepSound)
@@ -184,7 +188,10 @@ class AudioRecorder: NSObject, ObservableObject {
         guard let buffer = AVAudioPCMBuffer(
             pcmFormat: format,
             frameCapacity: AVAudioFrameCount(audioData.count)
-        ) else { return }
+        ) else { 
+            print("❌ Failed to create audio buffer")
+            return 
+        }
         
         buffer.frameLength = buffer.frameCapacity
         if let channelData = buffer.floatChannelData {
@@ -194,9 +201,10 @@ class AudioRecorder: NSObject, ObservableObject {
         do {
             let file = try AVAudioFile(forWriting: url, settings: format.settings)
             try file.write(from: buffer)
-            print("Recording saved")
+            print("✅ Recording saved to: \(url.lastPathComponent)")
+            print("   - File size: \(audioData.count * 4) bytes")
         } catch {
-            print("Failed to save recording: \(error)")
+            print("❌ Failed to save recording: \(error)")
         }
     }
     

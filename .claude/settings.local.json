@@ -28,7 +28,10 @@
       "WebFetch(domain:github.com)",
       "mcp__XcodeBuildMCP__clean_proj",
       "mcp__XcodeBuildMCP__start_device_log_cap",
-      "Bash(true)"
+      "Bash(true)",
+      "mcp__XcodeBuildMCP__launch_app_sim",
+      "mcp__XcodeBuildMCP__install_app_sim",
+      "mcp__XcodeBuildMCP__boot_sim"
     ],
     "deny": []
   }

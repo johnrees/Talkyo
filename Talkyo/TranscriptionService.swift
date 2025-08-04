@@ -15,18 +15,51 @@ class TranscriptionService: ObservableObject {
     @Published var isTranscribing = false
     
     private let whisperModel = WhisperModelHandler()
+    private let coreMLModel = CoreMLModelHandler()
     private let audioRecorder = AudioRecorder()
+    private var currentEngine = TranscriptionEngine.whisper
     
     var isModelReady: Bool {
-        whisperModel.isModelLoaded
+        switch currentEngine {
+        case .whisper:
+            return whisperModel.isModelLoaded
+        case .coreML:
+            return coreMLModel.isModelLoaded
+        }
     }
     
     var modelStatus: String {
-        whisperModel.modelStatus
+        switch currentEngine {
+        case .whisper:
+            return whisperModel.modelStatus
+        case .coreML:
+            return coreMLModel.modelStatus
+        }
     }
     
     var hasRecording: Bool {
         audioRecorder.hasRecording
+    }
+    
+    var recordedFileURL: URL? {
+        audioRecorder.recordedFileURL
+    }
+    
+    func setEngine(_ engine: TranscriptionEngine) {
+        currentEngine = engine
+        clearTranscription()
+    }
+    
+    func setWhisperModel(_ size: WhisperModelSize) {
+        Task {
+            clearTranscription()
+            await whisperModel.loadModel(size: size)
+        }
+    }
+    
+    func setCoreMLConfiguration(_ config: CoreMLConfiguration) {
+        clearTranscription()
+        coreMLModel.setConfiguration(config)
     }
     
     func startRecording() {
@@ -48,6 +81,12 @@ class TranscriptionService: ObservableObject {
         audioRecorder.playRecording()
     }
     
+    func showTestText() {
+        transcribedText = "あなたは日本人ですか"
+        furiganaText = "あなたは 日本人(にほんじん) ですか"
+        transcriptionTime = "Test (Ruby Text Demo)"
+    }
+    
     private func clearTranscription() {
         transcribedText = ""
         furiganaText = ""
@@ -58,14 +97,40 @@ class TranscriptionService: ObservableObject {
         isTranscribing = true
         let startTime = Date()
         
-        if let result = await whisperModel.transcribe(audioData: audioData) {
+        var result: String?
+        var error: String?
+        
+        switch currentEngine {
+        case .whisper:
+            let response = await whisperModel.transcribe(audioData: audioData)
+            result = response.text
+            error = response.error
+        case .coreML:
+            if let url = recordedFileURL {
+                let response = await coreMLModel.transcribe(audioURL: url)
+                result = response.text
+                error = response.error
+            } else {
+                error = "No recorded file URL available"
+            }
+        }
+        
+        if let result = result {
             let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
             
             transcribedText = result
             furiganaText = FuriganaGenerator.generate(for: result)
-            transcriptionTime = "\(elapsedMs)ms"
+            
+            switch currentEngine {
+            case .whisper:
+                transcriptionTime = "\(elapsedMs)ms (Whisper \(whisperModel.currentModelSize.displayName))"
+            case .coreML:
+                transcriptionTime = "\(elapsedMs)ms (Core ML \(coreMLModel.currentConfiguration.rawValue))"
+            }
         } else {
-            transcribedText = "Transcription failed"
+            transcribedText = error ?? "Transcription failed"
+            furiganaText = ""
+            transcriptionTime = ""
         }
         
         isTranscribing = false
