@@ -6,36 +6,42 @@
 //
 
 import Foundation
+import Combine
+
+// MARK: - Transcription Service
 
 @MainActor
-class TranscriptionService: ObservableObject {
-    @Published var transcribedText = ""
-    @Published var furiganaText = ""
-    @Published var transcriptionTime = ""
-    @Published var isTranscribing = false
+final class TranscriptionService: ObservableObject {
+    // MARK: - Published Properties
     
-    private let coreMLModel = CoreMLModelHandler()
+    @Published private(set) var transcribedText = ""
+    @Published private(set) var furiganaText = ""
+    @Published private(set) var transcriptionTime = ""
+    @Published private(set) var isTranscribing = false
+    @Published private(set) var hasRecording = false
+    
+    // MARK: - Dependencies
+    
+    private let speechRecognizer = SpeechRecognizer()
     private let audioRecorder = AudioRecorder()
     
-    var isModelReady: Bool {
-        return coreMLModel.isModelLoaded
-    }
+    // MARK: - Private Properties
     
-    var modelStatus: String {
-        return coreMLModel.modelStatus
-    }
-    
-    var hasRecording: Bool {
-        audioRecorder.hasRecording
-    }
-    
-    var recordedFileURL: URL? {
+    private var recordingURL: URL? {
         audioRecorder.recordedFileURL
     }
     
-    func setCoreMLConfiguration(_ config: CoreMLConfiguration) {
+    // MARK: - Initialization
+    
+    init() {
+        setupObservers()
+    }
+    
+    // MARK: - Public Methods
+    
+    func setRecognitionMode(_ mode: SpeechRecognitionMode) {
         clearTranscription()
-        coreMLModel.setConfiguration(config)
+        speechRecognizer.setConfiguration(mode)
     }
     
     func startRecording() {
@@ -44,12 +50,8 @@ class TranscriptionService: ObservableObject {
     }
     
     func stopRecording() {
-        let audioData = audioRecorder.stopRecording()
-        
-        if !audioData.isEmpty {
-            Task {
-                await transcribe(audioData: audioData)
-            }
+        Task {
+            await processRecording()
         }
     }
     
@@ -57,10 +59,12 @@ class TranscriptionService: ObservableObject {
         audioRecorder.playRecording()
     }
     
-    func showTestText() {
-        transcribedText = "あなたは日本人ですか"
-        furiganaText = "あなたは 日本人(にほんじん) ですか"
-        transcriptionTime = "Test (Ruby Text Demo)"
+    // MARK: - Private Methods
+    
+    private func setupObservers() {
+        audioRecorder.$hasRecording
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$hasRecording)
     }
     
     private func clearTranscription() {
@@ -69,33 +73,59 @@ class TranscriptionService: ObservableObject {
         transcriptionTime = ""
     }
     
-    private func transcribe(audioData: [Float]) async {
+    private func processRecording() async {
+        let audioData = audioRecorder.stopRecording()
+        
+        guard !audioData.isEmpty,
+              let recordingURL = recordingURL else {
+            transcribedText = "No audio recorded"
+            return
+        }
+        
+        await transcribeAudio(from: recordingURL)
+    }
+    
+    private func transcribeAudio(from url: URL) async {
         isTranscribing = true
+        defer { isTranscribing = false }
+        
         let startTime = Date()
         
-        var result: String?
-        var error: String?
-        
-        if let url = recordedFileURL {
-            let response = await coreMLModel.transcribe(audioURL: url)
-            result = response.text
-            error = response.error
-        } else {
-            error = "No recorded file URL available"
-        }
-        
-        if let result = result {
-            let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        do {
+            let result = try await speechRecognizer.transcribe(audioURL: url)
+            let elapsedTime = Date().timeIntervalSince(startTime)
             
-            transcribedText = result
-            furiganaText = FuriganaGenerator.generate(for: result)
-            transcriptionTime = "\(elapsedMs)ms (\(coreMLModel.currentConfiguration.rawValue))"
-        } else {
-            transcribedText = error ?? "Transcription failed"
-            furiganaText = ""
-            transcriptionTime = ""
+            updateTranscription(
+                text: result.text,
+                mode: result.recognitionMode,
+                elapsedTime: elapsedTime
+            )
+        } catch {
+            handleTranscriptionError(error)
         }
-        
-        isTranscribing = false
     }
+    
+    private func updateTranscription(text: String, mode: String, elapsedTime: TimeInterval) {
+        transcribedText = text
+        furiganaText = FuriganaGenerator.generate(for: text)
+        transcriptionTime = formatTranscriptionTime(elapsedTime, mode: mode)
+    }
+    
+    private func handleTranscriptionError(_ error: Error) {
+        transcribedText = "Error: \(error.localizedDescription)"
+        furiganaText = ""
+        transcriptionTime = ""
+    }
+    
+    private func formatTranscriptionTime(_ interval: TimeInterval, mode: String) -> String {
+        let milliseconds = Int(interval * 1000)
+        return "\(milliseconds)ms (\(mode))"
+    }
+}
+
+// MARK: - Speech Recognition Result
+
+struct SpeechRecognitionResult {
+    let text: String
+    let recognitionMode: String
 }

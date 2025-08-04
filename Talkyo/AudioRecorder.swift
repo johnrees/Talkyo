@@ -8,204 +8,68 @@
 import AVFoundation
 import AudioToolbox
 
-class AudioRecorder: NSObject, ObservableObject {
+// MARK: - Audio Recorder
+
+final class AudioRecorder: NSObject, ObservableObject {
+    // MARK: - Published Properties
+    
+    @Published private(set) var isRecording = false
+    @Published private(set) var hasRecording = false
+    @Published private(set) var recordedFileURL: URL?
+    
+    // MARK: - Private Properties
+    
     private var audioEngine: AVAudioEngine?
     private var audioConverter: AVAudioConverter?
     private var audioPlayer: AVAudioPlayer?
+    private var audioBuffer: [Float] = []
     
-    @Published var isRecording = false
-    @Published var hasRecording = false
+    // MARK: - Audio Configuration
     
-    private var audioData: [Float] = []
-    private(set) var recordedFileURL: URL?
+    private enum AudioConfig {
+        static let sampleRate: Double = 16000
+        static let bufferSize: AVAudioFrameCount = 2048
+        static let beepDelay: TimeInterval = 0.5
+        
+        // System sounds
+        static let startBeepSound: SystemSoundID = 1113
+        static let stopBeepSound: SystemSoundID = 1114
+    }
     
-    private let sampleRate: Double = 16000
-    private let bufferSize: AVAudioFrameCount = 2048
-    
-    // System sound IDs for beeps
-    private let startBeepSound: SystemSoundID = 1113  // Begin recording sound
-    private let stopBeepSound: SystemSoundID = 1114   // End recording sound
+    // MARK: - Initialization
     
     override init() {
         super.init()
-        setupAudioSession()
+        configureAudioSession()
         setupAudioEngine()
     }
     
-    private func setupAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        
-        AVAudioApplication.requestRecordPermission { [weak self] granted in
-            if granted {
-                do {
-                    try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
-                    try session.setActive(true)
-                    print("Audio session configured")
-                } catch {
-                    print("Failed to setup audio session: \(error)")
-                }
-            }
-        }
-    }
-    
-    private func setupAudioEngine() {
-        audioEngine = AVAudioEngine()
-    }
+    // MARK: - Public Methods
     
     func startRecording() {
-        guard let audioEngine = audioEngine,
-              !isRecording else { return }
+        guard let engine = audioEngine, !isRecording else { return }
         
-        let inputNode = audioEngine.inputNode
+        prepareForRecording()
+        playBeep(AudioConfig.startBeepSound)
         
-        // Play start beep
-        AudioServicesPlaySystemSound(startBeepSound)
-        
-        // Stop any playing audio
-        audioPlayer?.stop()
-        audioPlayer = nil
-        
-        // Clear previous data
-        audioData.removeAll()
-        
-        // Ensure engine is ready
-        if audioEngine.isRunning {
-            inputNode.removeTap(onBus: 0)
-            audioEngine.stop()
-            audioEngine.reset()
-        }
-        
-        // Delay to let beep finish completely before recording (system sounds can be ~0.3-0.5s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.startRecordingAfterBeep(audioEngine: audioEngine, inputNode: inputNode)
-        }
-    }
-    
-    private func startRecordingAfterBeep(audioEngine: AVAudioEngine, inputNode: AVAudioInputNode) {
-        // Setup audio format conversion
-        let inputFormat = inputNode.outputFormat(forBus: 0)
-        let recordingFormat = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: sampleRate,
-            channels: 1,
-            interleaved: false
-        )!
-        
-        audioConverter = AVAudioConverter(from: inputFormat, to: recordingFormat)
-        
-        // Install tap
-        inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: inputFormat) { [weak self] buffer, _ in
-            self?.processAudioBuffer(buffer)
-        }
-        
-        // Start engine
-        audioEngine.prepare()
-        do {
-            try audioEngine.start()
-            isRecording = true
-            print("Recording started")
-        } catch {
-            print("Failed to start recording: \(error)")
-            inputNode.removeTap(onBus: 0)
+        // Delay recording to allow beep to finish
+        DispatchQueue.main.asyncAfter(deadline: .now() + AudioConfig.beepDelay) { [weak self] in
+            self?.beginRecording(with: engine)
         }
     }
     
     func stopRecording() -> [Float] {
-        guard let audioEngine = audioEngine,
-              isRecording else { return [] }
+        guard isRecording else { return [] }
         
-        let inputNode = audioEngine.inputNode
+        completeRecording()
+        playBeep(AudioConfig.stopBeepSound)
         
-        isRecording = false
-        
-        inputNode.removeTap(onBus: 0)
-        audioEngine.stop()
-        audioEngine.reset()
-        audioConverter = nil
-        
-        let duration = Double(audioData.count) / sampleRate
-        print("📊 Recording stopped:")
-        print("   - Samples: \(audioData.count)")
-        print("   - Duration: \(String(format: "%.2f", duration)) seconds")
-        print("   - Sample rate: \(sampleRate) Hz")
-        
-        // Play stop beep after recording stops
-        AudioServicesPlaySystemSound(stopBeepSound)
-        
-        if !audioData.isEmpty {
+        if !audioBuffer.isEmpty {
             saveRecording()
             hasRecording = true
         }
         
-        return audioData
-    }
-    
-    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard let converter = audioConverter else { return }
-        
-        let outputFrameCapacity = AVAudioFrameCount(
-            Double(buffer.frameLength) * sampleRate / buffer.format.sampleRate
-        )
-        
-        guard let convertedBuffer = AVAudioPCMBuffer(
-            pcmFormat: AVAudioFormat(
-                commonFormat: .pcmFormatFloat32,
-                sampleRate: sampleRate,
-                channels: 1,
-                interleaved: false
-            )!,
-            frameCapacity: outputFrameCapacity
-        ) else { return }
-        
-        var error: NSError?
-        converter.convert(to: convertedBuffer, error: &error) { _, outStatus in
-            outStatus.pointee = .haveData
-            return buffer
-        }
-        
-        if error == nil, let channelData = convertedBuffer.floatChannelData {
-            let samples = Array(UnsafeBufferPointer(
-                start: channelData.pointee,
-                count: Int(convertedBuffer.frameLength)
-            ))
-            audioData.append(contentsOf: samples)
-        }
-    }
-    
-    private func saveRecording() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        recordedFileURL = documentsPath.appendingPathComponent("recording.wav")
-        
-        guard let url = recordedFileURL else { return }
-        
-        let format = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: sampleRate,
-            channels: 1,
-            interleaved: false
-        )!
-        
-        guard let buffer = AVAudioPCMBuffer(
-            pcmFormat: format,
-            frameCapacity: AVAudioFrameCount(audioData.count)
-        ) else { 
-            print("❌ Failed to create audio buffer")
-            return 
-        }
-        
-        buffer.frameLength = buffer.frameCapacity
-        if let channelData = buffer.floatChannelData {
-            channelData[0].update(from: audioData, count: audioData.count)
-        }
-        
-        do {
-            let file = try AVAudioFile(forWriting: url, settings: format.settings)
-            try file.write(from: buffer)
-            print("✅ Recording saved to: \(url.lastPathComponent)")
-            print("   - File size: \(audioData.count * 4) bytes")
-        } catch {
-            print("❌ Failed to save recording: \(error)")
-        }
+        return audioBuffer
     }
     
     func playRecording() {
@@ -214,10 +78,200 @@ class AudioRecorder: NSObject, ObservableObject {
         
         do {
             audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.delegate = self
             audioPlayer?.play()
-            print("Playing recording")
         } catch {
-            print("Failed to play recording: \(error)")
+            print("Playback failed: \(error)")
         }
+    }
+    
+    // MARK: - Private Methods - Setup
+    
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        
+        AVAudioApplication.requestRecordPermission { granted in
+            guard granted else { return }
+            
+            do {
+                try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+                try session.setActive(true)
+            } catch {
+                print("Audio session setup failed: \(error)")
+            }
+        }
+    }
+    
+    private func setupAudioEngine() {
+        audioEngine = AVAudioEngine()
+    }
+    
+    // MARK: - Private Methods - Recording
+    
+    private func prepareForRecording() {
+        // Stop any active playback
+        audioPlayer?.stop()
+        audioPlayer = nil
+        
+        // Clear previous data
+        audioBuffer.removeAll()
+        
+        // Reset engine if needed
+        if let engine = audioEngine, engine.isRunning {
+            engine.inputNode.removeTap(onBus: 0)
+            engine.stop()
+            engine.reset()
+        }
+    }
+    
+    private func beginRecording(with engine: AVAudioEngine) {
+        let inputNode = engine.inputNode
+        let inputFormat = inputNode.outputFormat(forBus: 0)
+        
+        guard let recordingFormat = createRecordingFormat(),
+              let converter = createAudioConverter(from: inputFormat, to: recordingFormat) else {
+            return
+        }
+        
+        audioConverter = converter
+        
+        // Install tap to capture audio
+        inputNode.installTap(onBus: 0, bufferSize: AudioConfig.bufferSize, format: inputFormat) { [weak self] buffer, _ in
+            self?.processAudioBuffer(buffer)
+        }
+        
+        // Start engine
+        do {
+            engine.prepare()
+            try engine.start()
+            isRecording = true
+        } catch {
+            print("Failed to start recording: \(error)")
+            inputNode.removeTap(onBus: 0)
+        }
+    }
+    
+    private func completeRecording() {
+        guard let engine = audioEngine else { return }
+        
+        isRecording = false
+        
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        engine.reset()
+        audioConverter = nil
+        
+        logRecordingStats()
+    }
+    
+    // MARK: - Private Methods - Audio Processing
+    
+    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+        guard let converter = audioConverter,
+              let convertedBuffer = createConvertedBuffer(for: buffer) else { return }
+        
+        var error: NSError?
+        let status = converter.convert(to: convertedBuffer, error: &error) { _, outStatus in
+            outStatus.pointee = .haveData
+            return buffer
+        }
+        
+        guard error == nil, status != .error,
+              let channelData = convertedBuffer.floatChannelData else { return }
+        
+        let samples = Array(UnsafeBufferPointer(
+            start: channelData[0],
+            count: Int(convertedBuffer.frameLength)
+        ))
+        
+        audioBuffer.append(contentsOf: samples)
+    }
+    
+    // MARK: - Private Methods - File Management
+    
+    private func saveRecording() {
+        guard let format = createRecordingFormat(),
+              let buffer = createAudioBuffer(format: format, samples: audioBuffer) else {
+            return
+        }
+        
+        let url = generateRecordingURL()
+        
+        do {
+            let file = try AVAudioFile(forWriting: url, settings: format.settings)
+            try file.write(from: buffer)
+            recordedFileURL = url
+        } catch {
+            print("Failed to save recording: \(error)")
+        }
+    }
+    
+    // MARK: - Private Methods - Helpers
+    
+    private func createRecordingFormat() -> AVAudioFormat? {
+        AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: AudioConfig.sampleRate,
+            channels: 1,
+            interleaved: false
+        )
+    }
+    
+    private func createAudioConverter(from inputFormat: AVAudioFormat, to outputFormat: AVAudioFormat) -> AVAudioConverter? {
+        AVAudioConverter(from: inputFormat, to: outputFormat)
+    }
+    
+    private func createConvertedBuffer(for sourceBuffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard let format = createRecordingFormat() else { return nil }
+        
+        let frameCapacity = AVAudioFrameCount(
+            Double(sourceBuffer.frameLength) * AudioConfig.sampleRate / sourceBuffer.format.sampleRate
+        )
+        
+        return AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity)
+    }
+    
+    private func createAudioBuffer(format: AVAudioFormat, samples: [Float]) -> AVAudioPCMBuffer? {
+        guard let buffer = AVAudioPCMBuffer(
+            pcmFormat: format,
+            frameCapacity: AVAudioFrameCount(samples.count)
+        ) else { return nil }
+        
+        buffer.frameLength = buffer.frameCapacity
+        
+        if let channelData = buffer.floatChannelData {
+            channelData[0].update(from: samples, count: samples.count)
+        }
+        
+        return buffer
+    }
+    
+    private func generateRecordingURL() -> URL {
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return documentsPath.appendingPathComponent("recording.wav")
+    }
+    
+    private func playBeep(_ soundID: SystemSoundID) {
+        AudioServicesPlaySystemSound(soundID)
+    }
+    
+    private func logRecordingStats() {
+        let duration = Double(audioBuffer.count) / AudioConfig.sampleRate
+        let sampleCount = audioBuffer.count
+        
+        print("""
+        Recording completed:
+        - Duration: \(String(format: "%.2f", duration))s
+        - Samples: \(sampleCount)
+        - Sample rate: \(Int(AudioConfig.sampleRate))Hz
+        """)
+    }
+}
+
+// MARK: - AVAudioPlayerDelegate
+
+extension AudioRecorder: AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        // Handle playback completion if needed
     }
 }

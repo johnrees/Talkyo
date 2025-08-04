@@ -1,67 +1,85 @@
 # Talkyo - iOS Japanese Voice Transcription App
 
 ## Overview
-Talkyo is a simple iOS app for Japanese speech transcription using Apple's Core ML Speech Recognition. It features push-to-talk recording, real-time transcription, and automatic furigana generation.
+Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speech Recognition framework. It features push-to-talk recording, real-time transcription with automatic punctuation, and automatic furigana generation.
 
 ## Architecture
 
 ### ContentView.swift
-- Main UI with push-to-talk button
-- Core ML configuration selector (On-Device, Server, Hybrid)
-- Displays transcription results with kanji and kana on separate lines
-- Shows playback button when recording exists
+- Main UI with push-to-talk interface
+- Speech recognition mode selector (On-Device, Server, Hybrid)
+- Displays transcription results with original text and full kana reading
+- Playback controls for recorded audio
+- Clean separation of view components
 
 ### TranscriptionService.swift
-- Coordinates between audio recording and transcription
-- Manages app state and UI updates
-- Handles timing and error cases
+- Central coordinator for the transcription workflow
+- Manages application state and UI updates
+- Handles async transcription processing
+- Provides clean public API with proper error handling
+- Uses Combine for reactive state management
 
-### CoreMLModelHandler.swift
-- Wraps Apple's Speech Recognition framework
-- Supports three modes:
+### SpeechRecognizer.swift
+- Modern wrapper around Apple's Speech Recognition framework
+- Supports three recognition modes:
   - On-Device: Fast, private, works offline
   - Server: More accurate, requires internet
   - Hybrid: System chooses best option
-- Configured for Japanese (ja-JP) recognition
+- Configured for Japanese (ja-JP) with automatic punctuation
+- Async/await based API with proper error types
+- Implements SFSpeechRecognizerDelegate for availability monitoring
 
 ### AudioRecorder.swift
-- Handles audio recording and playback
-- Saves recordings as WAV files at 16kHz
-- Plays system beeps before/after recording
-- 0.5s delay after start beep to prevent audio bleed
+- Handles audio recording and playback functionality
+- Records at 16kHz mono in WAV format
+- System sound feedback (beeps) for recording start/stop
+- 0.5s delay after start beep to prevent audio bleeding
+- Clean separation of recording, processing, and file management
+- Proper memory management and resource cleanup
 
 ### FuriganaGenerator.swift
-- Generates hiragana readings for kanji
-- Uses iOS Japanese tokenizer
-- Filters out unnecessary furigana
+- Generates hiragana readings for Japanese text
+- Uses iOS Japanese tokenizer for accurate readings
+- Filters out unnecessary furigana (when identical to input)
+- Implemented as a stateless enum with static methods
 
 ## Key Features
 
 1. **Push-to-Talk**: Hold button to record, release to transcribe
-2. **Core ML Options**: Choose between on-device, server, or hybrid recognition
-3. **Dual Display**: Shows original text (kanji) and full kana reading below
-4. **Playback**: Review recordings after transcription
-5. **Audio Feedback**: Beep sounds indicate recording start/stop
-6. **Performance Metrics**: Shows transcription time and mode used
+2. **Recognition Modes**: Choose between on-device, server, or hybrid recognition
+3. **Automatic Punctuation**: Adds periods, commas, and question marks based on speech patterns
+4. **Dual Display**: Shows original transcribed text with full hiragana reading below
+5. **Audio Playback**: Review recordings after transcription
+6. **Audio Feedback**: System beeps indicate recording start/stop
+7. **Performance Metrics**: Displays transcription time and recognition mode used
 
-## Technical Notes
+## Technical Details
 
-### Audio Recording
-- Uses system sounds 1113 (start) and 1114 (stop) for beeps
-- 0.5 second delay after start beep prevents audio bleeding into recording
-- Recording at 16kHz mono for Whisper compatibility
-- Audio saved as WAV files in documents directory
+### Audio Configuration
+- Sample rate: 16kHz mono
+- Format: WAV (PCM Float32)
+- System sounds: 1113 (start), 1114 (stop)
+- 0.5 second delay after start beep to prevent audio bleed
+- Files saved to app's documents directory
 
-## Development Guidelines
+### Speech Recognition
+- Locale: ja-JP (Japanese)
+- Punctuation: Enabled for iOS 16+
+- Task hint: Dictation mode for optimal punctuation
+- Supports on-device and server-based recognition
 
-- Keep code simple and focused
-- Separate concerns into distinct classes
-- Use SwiftUI and Combine for reactive UI
-- Test on physical device (audio doesn't work in simulator)
+## Code Architecture Principles
 
-## Future Enhancements
+- **Modern Swift**: Uses async/await, Combine, and latest Swift conventions
+- **Clear Separation**: Each class has a single, well-defined responsibility
+- **Error Handling**: Proper error types and async error propagation
+- **Access Control**: Appropriate use of private/public modifiers
+- **Documentation**: Self-documenting code with clear naming
+- **Testing**: Designed for testability with dependency injection
 
-- Transcription history
-- Export functionality
-- Dictionary integration
-- True furigana display (ruby text above kanji)
+## Development Notes
+
+- Test on physical device (audio features don't work in simulator)
+- Microphone and speech recognition permissions required
+- Minimum iOS 18.0 for latest features
+- Uses SwiftUI and Combine for reactive UI updates

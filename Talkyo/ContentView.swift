@@ -7,12 +7,14 @@
 
 import SwiftUI
 
-enum CoreMLConfiguration: String, CaseIterable {
+// MARK: - Speech Recognition Configuration
+
+enum SpeechRecognitionMode: String, CaseIterable {
     case onDevice = "On-Device"
     case server = "Server"
     case hybrid = "Hybrid"
     
-    var description: String {
+    var subtitle: String {
         switch self {
         case .onDevice: return "Faster, Private"
         case .server: return "More Accurate"
@@ -21,178 +23,203 @@ enum CoreMLConfiguration: String, CaseIterable {
     }
 }
 
+// MARK: - Main View
+
 struct ContentView: View {
     @StateObject private var transcriptionService = TranscriptionService()
     @State private var isRecording = false
-    @State private var selectedCoreMLConfig = CoreMLConfiguration.onDevice
+    @State private var selectedMode = SpeechRecognitionMode.onDevice
     
     var body: some View {
         VStack(spacing: 20) {
-            VStack(spacing: 10) {
-                Text("Recognition Mode")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                Picker("Mode", selection: $selectedCoreMLConfig) {
-                    ForEach(CoreMLConfiguration.allCases, id: \.self) { config in
-                        Text(config.rawValue).tag(config)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .onChange(of: selectedCoreMLConfig) { newValue in
-                    transcriptionService.setCoreMLConfiguration(newValue)
-                }
-            }
-            .padding(.top, 20)
+            recognitionModeSelector
+                .padding(.top, 20)
             
-            TranscriptionView(
-                text: transcriptionService.transcribedText,
-                furigana: transcriptionService.furiganaText,
-                time: transcriptionService.transcriptionTime
+            TranscriptionDisplay(
+                transcribedText: transcriptionService.transcribedText,
+                furiganaText: transcriptionService.furiganaText,
+                processingTime: transcriptionService.transcriptionTime
             )
             
             Spacer()
             
+            controlButtons
+                .padding(.bottom, 50)
+        }
+    }
+    
+    // MARK: - View Components
+    
+    private var recognitionModeSelector: some View {
+        VStack(spacing: 10) {
+            Text("Recognition Mode")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Picker("Mode", selection: $selectedMode) {
+                ForEach(SpeechRecognitionMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .onChange(of: selectedMode) { _, newValue in
+                transcriptionService.setRecognitionMode(newValue)
+            }
+        }
+    }
+    
+    private var controlButtons: some View {
+        VStack(spacing: 16) {
             if transcriptionService.hasRecording {
-                PlayButton {
+                PlaybackButton {
                     transcriptionService.playRecording()
                 }
             }
             
-            #if DEBUG
-            Button("Test Ruby Text") {
-                transcriptionService.showTestText()
-            }
-            .foregroundColor(.orange)
-            #endif
-            
             RecordButton(isRecording: $isRecording) {
-                if isRecording {
-                    transcriptionService.startRecording()
-                } else {
-                    transcriptionService.stopRecording()
-                }
+                handleRecordingToggle()
             }
-            .padding(.bottom, 50)
+        }
+    }
+    
+    // MARK: - Actions
+    
+    private func handleRecordingToggle() {
+        if isRecording {
+            transcriptionService.startRecording()
+        } else {
+            transcriptionService.stopRecording()
         }
     }
 }
 
-struct TranscriptionView: View {
-    let text: String
-    let furigana: String
-    let time: String
+// MARK: - Transcription Display
+
+struct TranscriptionDisplay: View {
+    let transcribedText: String
+    let furiganaText: String
+    let processingTime: String
+    
+    private let placeholderText = "話してください"
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 15) {
-                if text.isEmpty {
-                    Text("話してください")
-                        .font(.title2)
-                        .foregroundColor(.gray)
-                        .padding()
+            VStack(spacing: 16) {
+                if transcribedText.isEmpty {
+                    placeholderView
                 } else {
-                    // Show original text with kanji
-                    Text(text)
-                        .font(.system(size: 32))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                    
-                    // Show kana reading below
-                    if !furigana.isEmpty {
-                        Text(extractKanaReading(furigana: furigana))
-                            .font(.system(size: 20))
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
+                    transcriptionContent
                 }
                 
-                if !time.isEmpty {
-                    Text(time)
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                        .padding(.top, 5)
+                if !processingTime.isEmpty {
+                    performanceIndicator
                 }
             }
             .padding(.vertical)
             .frame(maxWidth: .infinity, minHeight: 200)
         }
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
         .padding(.horizontal)
     }
     
-    private func extractKanaReading(furigana: String) -> String {
-        // Convert furigana format to full kana reading
-        var result = ""
-        let components = furigana.components(separatedBy: " ")
-        
-        for component in components {
-            if component.contains("(") && component.contains(")") {
-                let parts = component.split(separator: "(", maxSplits: 1)
-                if parts.count == 2 {
-                    let reading = String(parts[1].dropLast()) // Remove closing parenthesis
-                    result += reading
-                }
-            } else {
-                result += component
+    private var placeholderView: some View {
+        Text(placeholderText)
+            .font(.title2)
+            .foregroundColor(.secondary)
+            .padding()
+    }
+    
+    private var transcriptionContent: some View {
+        VStack(spacing: 12) {
+            // Original text with kanji
+            Text(transcribedText)
+                .font(.system(size: 32))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            // Kana reading
+            if !furiganaText.isEmpty {
+                Text(furiganaText)
+                    .font(.system(size: 20))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             }
         }
-        
-        return result
+    }
+    
+    private var performanceIndicator: some View {
+        Text(processingTime)
+            .font(.caption)
+            .foregroundColor(.blue)
+            .padding(.top, 4)
     }
 }
+
+// MARK: - Record Button
 
 struct RecordButton: View {
     @Binding var isRecording: Bool
     let action: () -> Void
     
+    private let buttonSize: CGFloat = 120
+    private let iconSize: CGFloat = 50
+    
     var body: some View {
         Button(action: {}) {
-            Image(systemName: isRecording ? "mic.fill" : "mic")
-                .font(.system(size: 50))
-                .foregroundColor(.white)
-                .frame(width: 120, height: 120)
-                .background(isRecording ? Color.red : Color.blue)
-                .clipShape(Circle())
-                .scaleEffect(isRecording ? 1.1 : 1.0)
-                .animation(.easeInOut(duration: 0.2), value: isRecording)
+            recordButtonContent
         }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isRecording {
-                        isRecording = true
-                        action()
-                    }
+        .simultaneousGesture(pushToTalkGesture)
+    }
+    
+    private var recordButtonContent: some View {
+        Image(systemName: isRecording ? "mic.fill" : "mic")
+            .font(.system(size: iconSize))
+            .foregroundColor(.white)
+            .frame(width: buttonSize, height: buttonSize)
+            .background(recordingBackground)
+            .clipShape(Circle())
+            .scaleEffect(isRecording ? 1.1 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: isRecording)
+    }
+    
+    private var recordingBackground: Color {
+        isRecording ? .red : .blue
+    }
+    
+    private var pushToTalkGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                if !isRecording {
+                    isRecording = true
+                    action()
                 }
-                .onEnded { _ in
-                    if isRecording {
-                        isRecording = false
-                        action()
-                    }
+            }
+            .onEnded { _ in
+                if isRecording {
+                    isRecording = false
+                    action()
                 }
-        )
+            }
     }
 }
 
-struct PlayButton: View {
+// MARK: - Playback Button
+
+struct PlaybackButton: View {
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            HStack {
-                Image(systemName: "play.circle.fill")
-                Text("Play Recording")
-            }
-            .font(.system(size: 16))
-            .foregroundColor(.white)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(Color.green)
-            .cornerRadius(20)
+            Label("Play Recording", systemImage: "play.circle.fill")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(Color.green)
+                .cornerRadius(20)
         }
     }
 }

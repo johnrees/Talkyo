@@ -7,49 +7,89 @@
 
 import Foundation
 
-struct FuriganaGenerator {
+// MARK: - Furigana Generator
+
+enum FuriganaGenerator {
+    // MARK: - Public Methods
+    
     static func generate(for text: String) -> String {
-        // Skip if no kanji or katakana
-        guard text.contains(where: { isKanji($0) || isKatakana($0) }) else {
+        // Skip processing if text contains no kanji or katakana
+        guard textRequiresFurigana(text) else {
             return ""
         }
         
-        // Use Japanese tokenizer for proper readings
-        let tokenizer = CFStringTokenizerCreate(
+        let furiganaText = generateFuriganaText(from: text)
+        
+        // Don't show furigana if it's identical to the original
+        return furiganaText == text ? "" : furiganaText
+    }
+    
+    // MARK: - Private Methods
+    
+    private static func textRequiresFurigana(_ text: String) -> Bool {
+        text.contains { character in
+            isKanji(character) || isKatakana(character)
+        }
+    }
+    
+    private static func generateFuriganaText(from text: String) -> String {
+        let tokenizer = createJapaneseTokenizer(for: text)
+        var furiganaComponents: [String] = []
+        
+        var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+        
+        while tokenType != [] {
+            if let reading = extractHiraganaReading(from: tokenizer) {
+                furiganaComponents.append(reading)
+            }
+            tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+        }
+        
+        return furiganaComponents.joined()
+    }
+    
+    private static func createJapaneseTokenizer(for text: String) -> CFStringTokenizer {
+        CFStringTokenizerCreate(
             kCFAllocatorDefault,
             text as CFString,
             CFRangeMake(0, text.count),
             kCFStringTokenizerUnitWord,
             Locale(identifier: "ja_JP") as CFLocale
         )
-        
-        var furigana = ""
-        var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
-        
-        while tokenType != [] {
-            if let latin = CFStringTokenizerCopyCurrentTokenAttribute(
-                tokenizer,
-                kCFStringTokenizerAttributeLatinTranscription
-            ) as? String {
-                // Convert romaji to hiragana
-                let hiragana = NSMutableString(string: latin)
-                CFStringTransform(hiragana, nil, kCFStringTransformLatinHiragana, false)
-                furigana += hiragana as String
-            }
-            tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+    }
+    
+    private static func extractHiraganaReading(from tokenizer: CFStringTokenizer) -> String? {
+        guard let latinReading = CFStringTokenizerCopyCurrentTokenAttribute(
+            tokenizer,
+            kCFStringTokenizerAttributeLatinTranscription
+        ) as? String else {
+            return nil
         }
         
-        // Don't show furigana if it's the same as the original text
-        return furigana == text ? "" : furigana
+        // Convert romaji to hiragana
+        let hiraganaReading = NSMutableString(string: latinReading)
+        CFStringTransform(hiraganaReading, nil, kCFStringTransformLatinHiragana, false)
+        
+        return hiraganaReading as String
     }
     
-    private static func isKanji(_ char: Character) -> Bool {
-        guard let scalar = char.unicodeScalars.first else { return false }
-        return (0x4E00...0x9FFF).contains(Int(scalar.value))
+    // MARK: - Character Classification
+    
+    private static func isKanji(_ character: Character) -> Bool {
+        guard let unicodeScalar = character.unicodeScalars.first else {
+            return false
+        }
+        
+        let kanjiRange = 0x4E00...0x9FFF
+        return kanjiRange.contains(Int(unicodeScalar.value))
     }
     
-    private static func isKatakana(_ char: Character) -> Bool {
-        guard let scalar = char.unicodeScalars.first else { return false }
-        return (0x30A0...0x30FF).contains(Int(scalar.value))
+    private static func isKatakana(_ character: Character) -> Bool {
+        guard let unicodeScalar = character.unicodeScalars.first else {
+            return false
+        }
+        
+        let katakanaRange = 0x30A0...0x30FF
+        return katakanaRange.contains(Int(unicodeScalar.value))
     }
 }
