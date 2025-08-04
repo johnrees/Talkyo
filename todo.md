@@ -19,6 +19,8 @@
 - Implemented SwiftUI-based FuriganaTextView for reliable rendering
 - Furigana appears at 50% font size above kanji characters
 - Non-kanji text is properly aligned with vertical padding
+- Integrated KosugiMaru-Regular font for improved Japanese text rendering
+- Applied bold weight to main text, semibold to furigana
 
 ## Phase 1: Core Enhancements ⭐ CURRENT PRIORITY
 
@@ -85,6 +87,11 @@
 - Performance is good with the SwiftUI implementation
 - Edge cases handled through proper token generation
 - VoiceOver support through standard SwiftUI Text components
+
+### UI/UX Improvements ✅ COMPLETED
+- Added 0.2s delay after button release to prevent cutting off speech
+- Integrated KosugiMaru-Regular font for better Japanese text readability
+- Applied appropriate font weights for visual hierarchy
 
 ### Audio Processing
 - Investigate Core Audio for pitch detection

@@ -177,6 +177,7 @@ struct RecordButton: View {
     
     private let buttonSize: CGFloat = 120
     private let iconSize: CGFloat = 50
+    @State private var stopTimer: Timer?
     
     var body: some View {
         Button(action: {}) {
@@ -203,6 +204,9 @@ struct RecordButton: View {
     private var pushToTalkGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { _ in
+                stopTimer?.invalidate()
+                stopTimer = nil
+                
                 if !isRecording {
                     isRecording = true
                     action()
@@ -210,8 +214,11 @@ struct RecordButton: View {
             }
             .onEnded { _ in
                 if isRecording {
-                    isRecording = false
-                    action()
+                    // Add 0.2s delay before stopping
+                    stopTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
+                        isRecording = false
+                        action()
+                    }
                 }
             }
     }

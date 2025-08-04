@@ -4,9 +4,10 @@ A simple iOS app for Japanese speech transcription with furigana generation.
 
 ## Features
 
-- **Push-to-Talk Recording**: Hold to record, release to transcribe
+- **Push-to-Talk Recording**: Hold to record, release to transcribe (with 0.2s grace period)
 - **Japanese Speech Recognition**: Uses Apple's Speech Recognition framework
 - **Ruby Text (Furigana) Display**: Shows hiragana readings directly above kanji characters
+- **Custom Japanese Font**: Uses KosugiMaru font for optimal readability
 - **Recognition Modes**: Choose between on-device (fast/private), server (accurate), or hybrid
 - **Automatic Punctuation**: Adds periods and commas based on speech patterns
 - **Audio Playback**: Review your recordings after transcription

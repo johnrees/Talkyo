@@ -11,6 +11,7 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Displays transcription results with furigana (ruby text) above kanji
 - Playback controls for recorded audio
 - Clean separation of view components
+- 0.2s delay after button release before stopping recording to catch end of speech
 
 ### TranscriptionService.swift
 - Central coordinator for the transcription workflow
@@ -54,6 +55,8 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Uses HStack with VStack overlays for proper alignment
 - Displays small hiragana (50% font size) above kanji characters
 - Aligns non-kanji text properly with furigana baseline
+- Uses KosugiMaru-Regular font for better Japanese text rendering
+- Bold font weight for main text, semibold for furigana
 
 ## Key Features
 
@@ -103,6 +106,16 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Hiragana readings now appear directly above kanji characters
 - Uses SwiftUI approach for reliable and maintainable implementation
 - Proper alignment ensures clean visual presentation
+
+### Font Integration (Completed)
+- Integrated KosugiMaru-Regular font for Japanese text display
+- Font registered in project settings via INFOPLIST_KEY_UIAppFonts
+- Applied bold weight to main text and semibold to furigana for improved readability
+
+### Recording Improvements (Completed)
+- Added 0.2s delay after button release before stopping recording
+- Prevents cutting off speech when users release button while still speaking
+- Maintains snappy and responsive UI feel
 
 ## Future Development
 
