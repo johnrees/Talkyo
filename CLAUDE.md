@@ -1,39 +1,35 @@
 # Talkyo - iOS Japanese Voice Transcription App
 
 ## Overview
-Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speech Recognition framework. It features push-to-talk recording, real-time transcription with automatic punctuation, and automatic furigana generation.
+Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speech Recognition framework. It features push-to-talk recording with swipe-to-cancel, both standard and real-time transcription modes, automatic punctuation, and furigana display.
 
 ## Architecture
 
 ### ContentView.swift
 - Push-to-talk interface with swipe-to-cancel gesture
-- Speech recognition mode selector (On-Device, Server, Hybrid)
+- Transcription mode selector (Standard/Live)
+- Speech recognition mode selector (On-Device/Server/Hybrid)
 - Displays transcription results with furigana above kanji
 - Playback controls for recorded audio
-- 0.2s delay after button release to catch end of speech
 
 ### TranscriptionService.swift
-- Central coordinator for the transcription workflow
+- Coordinates transcription workflow for both standard and live modes
 - Manages application state and UI updates
-- Handles async transcription processing
-- Provides clean public API with proper error handling
-- Uses Combine for reactive state management
+- Handles real-time transcription callbacks
+- Clean separation between live and standard transcription flows
 
 ### SpeechRecognizer.swift
-- Modern wrapper around Apple's Speech Recognition framework
-- Supports three recognition modes:
-  - On-Device: Fast, private, works offline
-  - Server: More accurate, requires internet
-  - Hybrid: System chooses best option
-- Configured for Japanese (ja-JP) with automatic punctuation
-- Async/await based API with proper error types
-- Implements SFSpeechRecognizerDelegate for availability monitoring
+- Wrapper for Apple's Speech Recognition framework
+- Supports both file-based and real-time streaming transcription
+- Three recognition modes: On-Device, Server, Hybrid
+- Handles partial and final transcription results
+- Japanese (ja-JP) with automatic punctuation
 
 ### AudioRecorder.swift
-- Audio recording and playback in 16kHz mono WAV format
-- Haptic feedback for recording start/stop/cancel
-- Supports cancelling recordings mid-capture
-- Saves recordings to app's documents directory
+- Audio recording and playback (16kHz mono WAV)
+- Provides audio buffers for live transcription
+- Haptic feedback: Light (start), Medium (stop), Heavy (cancel)
+- Supports mid-capture cancellation
 
 ### FuriganaGenerator.swift
 - Generates hiragana readings for Japanese text
@@ -54,25 +50,27 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 
 ## Key Features
 
-1. **Push-to-Talk**: Hold to record, release to transcribe, swipe away to cancel
-2. **Recognition Modes**: On-device (fast/private), server (accurate), or hybrid
-3. **Automatic Punctuation**: Adds punctuation based on speech patterns
-4. **Furigana Display**: Hiragana readings above kanji characters
-5. **Audio Playback**: Review recordings after transcription
-6. **Haptic Feedback**: Tactile feedback for recording actions
-7. **Performance Metrics**: Shows transcription time and mode used
+1. **Transcription Modes**:
+   - Standard: Process after recording (more accurate)
+   - Live: Real-time transcription while speaking
+2. **Push-to-Talk**: Hold to record, swipe away to cancel
+3. **Recognition Modes**: On-device, server, or hybrid
+4. **Furigana Display**: Hiragana readings above kanji
+5. **Haptic Feedback**: Tactile feedback for all actions
+6. **Audio Playback**: Review recordings after transcription
 
 ## Technical Details
 
 ### Audio Configuration
-- Sample rate: 16kHz mono WAV format
-- Haptic feedback: Light (start), Medium (stop), Heavy (cancel)
-- Files saved to app's documents directory
+- 16kHz mono WAV format
+- Real-time audio buffer streaming for live mode
+- Haptic feedback system for user actions
 
 ### Speech Recognition
-- Locale: ja-JP (Japanese)
-- Automatic punctuation enabled
-- Supports on-device and server-based recognition
+- Japanese (ja-JP) with automatic punctuation
+- File-based recognition for standard mode
+- Audio buffer streaming for live mode
+- Configurable on-device/server/hybrid processing
 
 ## Code Architecture Principles
 
@@ -104,9 +102,15 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Applied bold weight to main text and semibold to furigana for improved readability
 
 ### Recording Improvements (Completed)
-- Added 0.2s delay after button release to prevent cutting off speech
 - Swipe-to-cancel gesture for discarding recordings
-- Replaced audio beeps with haptic feedback for all recording actions
+- Replaced audio beeps with haptic feedback
+- 0.2s delay after button release to prevent cutting off speech
+
+### Live Transcription (Completed)
+- Real-time transcription mode with streaming audio buffers
+- Toggle between Standard and Live transcription modes
+- Partial transcription updates during recording
+- Maintains all features (furigana, recognition modes) in both modes
 
 ## Future Development
 

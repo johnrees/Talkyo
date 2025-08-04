@@ -23,23 +23,41 @@ enum SpeechRecognitionMode: String, CaseIterable {
     }
 }
 
+// MARK: - Transcription Mode
+
+enum TranscriptionMode: String, CaseIterable {
+    case standard = "Standard"
+    case live = "Live"
+    
+    var description: String {
+        switch self {
+        case .standard: return "Process after recording"
+        case .live: return "Real-time transcription"
+        }
+    }
+}
+
 // MARK: - Main View
 
 struct ContentView: View {
     @StateObject private var transcriptionService = TranscriptionService()
     @State private var isRecording = false
     @State private var selectedMode = SpeechRecognitionMode.onDevice
+    @State private var transcriptionMode = TranscriptionMode.standard
     
     var body: some View {
         VStack(spacing: 20) {
-            recognitionModeSelector
-                .padding(.top, 20)
+            VStack(spacing: 16) {
+                transcriptionModeSelector
+                recognitionModeSelector
+            }
+            .padding(.top, 20)
             
             TranscriptionDisplay(
                 transcribedText: transcriptionService.transcribedText,
-                furiganaText: transcriptionService.furiganaText,
                 furiganaTokens: transcriptionService.furiganaTokens,
-                processingTime: transcriptionService.transcriptionTime
+                processingTime: transcriptionService.transcriptionTime,
+                isLiveMode: transcriptionMode == .live
             )
             
             Spacer()
@@ -50,6 +68,25 @@ struct ContentView: View {
     }
     
     // MARK: - View Components
+    
+    private var transcriptionModeSelector: some View {
+        VStack(spacing: 10) {
+            Text("Transcription Mode")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Picker("Mode", selection: $transcriptionMode) {
+                ForEach(TranscriptionMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .onChange(of: transcriptionMode) { _, newValue in
+                transcriptionService.setTranscriptionMode(newValue)
+            }
+        }
+    }
     
     private var recognitionModeSelector: some View {
         VStack(spacing: 10) {
@@ -99,9 +136,9 @@ struct ContentView: View {
 
 struct TranscriptionDisplay: View {
     let transcribedText: String
-    let furiganaText: String
     let furiganaTokens: [FuriganaToken]
     let processingTime: String
+    let isLiveMode: Bool
     
     private let placeholderText = "話してください"
     
@@ -150,13 +187,6 @@ struct TranscriptionDisplay: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                 
-                if !furiganaText.isEmpty {
-                    Text(furiganaText)
-                        .font(.system(size: 20))
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
             }
         }
     }

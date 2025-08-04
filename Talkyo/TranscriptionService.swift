@@ -15,7 +15,6 @@ final class TranscriptionService: ObservableObject {
     // MARK: - Published Properties
     
     @Published private(set) var transcribedText = ""
-    @Published private(set) var furiganaText = ""
     @Published private(set) var furiganaTokens: [FuriganaToken] = []
     @Published private(set) var transcriptionTime = ""
     @Published private(set) var isTranscribing = false
@@ -28,14 +27,13 @@ final class TranscriptionService: ObservableObject {
     
     // MARK: - Private Properties
     
-    private var recordingURL: URL? {
-        audioRecorder.recordedFileURL
-    }
+    private var transcriptionMode: TranscriptionMode = .standard
     
     // MARK: - Initialization
     
     init() {
         setupObservers()
+        setupSpeechRecognizerCallbacks()
     }
     
     // MARK: - Public Methods
@@ -45,12 +43,26 @@ final class TranscriptionService: ObservableObject {
         speechRecognizer.setConfiguration(mode)
     }
     
+    func setTranscriptionMode(_ mode: TranscriptionMode) {
+        transcriptionMode = mode
+        clearTranscription()
+    }
+    
     func startRecording() {
         clearTranscription()
+        
+        if transcriptionMode == .live {
+            setupLiveTranscription()
+        }
+        
         audioRecorder.startRecording()
     }
     
     func stopRecording() {
+        if transcriptionMode == .live {
+            teardownLiveTranscription()
+        }
+        
         Task {
             await processRecording()
         }
@@ -61,6 +73,10 @@ final class TranscriptionService: ObservableObject {
     }
     
     func cancelRecording() {
+        if transcriptionMode == .live {
+            teardownLiveTranscription()
+        }
+        
         audioRecorder.cancelRecording()
         clearTranscription()
     }
@@ -73,23 +89,56 @@ final class TranscriptionService: ObservableObject {
             .assign(to: &$hasRecording)
     }
     
+    private func setupSpeechRecognizerCallbacks() {
+        speechRecognizer.onPartialTranscription = { [weak self] partialText in
+            Task { @MainActor [weak self] in
+                self?.updateTranscription(with: partialText, isFinal: false)
+            }
+        }
+        
+        speechRecognizer.onFinalTranscription = { [weak self] result in
+            Task { @MainActor [weak self] in
+                self?.updateTranscription(with: result.text, isFinal: true, mode: result.recognitionMode)
+            }
+        }
+    }
+    
     private func clearTranscription() {
         transcribedText = ""
-        furiganaText = ""
         furiganaTokens = []
         transcriptionTime = ""
+    }
+    
+    private func setupLiveTranscription() {
+        audioRecorder.onAudioBuffer = { [weak self] buffer in
+            self?.speechRecognizer.appendAudioBuffer(buffer)
+        }
+        
+        do {
+            try speechRecognizer.startLiveTranscription()
+        } catch {
+            print("Failed to start live transcription: \(error)")
+        }
+    }
+    
+    private func teardownLiveTranscription() {
+        speechRecognizer.stopLiveTranscription()
+        audioRecorder.onAudioBuffer = nil
     }
     
     private func processRecording() async {
         let audioData = audioRecorder.stopRecording()
         
         guard !audioData.isEmpty,
-              let recordingURL = recordingURL else {
+              let recordingURL = audioRecorder.recordedFileURL else {
             transcribedText = "No audio recorded"
             return
         }
         
-        await transcribeAudio(from: recordingURL)
+        // Only transcribe if in standard mode (live mode already transcribed)
+        if transcriptionMode == .standard {
+            await transcribeAudio(from: recordingURL)
+        }
     }
     
     private func transcribeAudio(from url: URL) async {
@@ -113,15 +162,24 @@ final class TranscriptionService: ObservableObject {
     }
     
     private func updateTranscription(text: String, mode: String, elapsedTime: TimeInterval) {
+        updateTranscription(with: text, isFinal: true, mode: mode, elapsedTime: elapsedTime)
+    }
+    
+    private func updateTranscription(with text: String, isFinal: Bool, mode: String? = nil, elapsedTime: TimeInterval? = nil) {
         transcribedText = text
-        furiganaText = FuriganaGenerator.generate(for: text)
         furiganaTokens = FuriganaGenerator.generateTokens(for: text)
-        transcriptionTime = formatTranscriptionTime(elapsedTime, mode: mode)
+        
+        if isFinal {
+            if let elapsedTime = elapsedTime, let mode = mode {
+                transcriptionTime = formatTranscriptionTime(elapsedTime, mode: mode)
+            } else if let mode = mode {
+                transcriptionTime = "Live - \(mode)"
+            }
+        }
     }
     
     private func handleTranscriptionError(_ error: Error) {
         transcribedText = "Error: \(error.localizedDescription)"
-        furiganaText = ""
         furiganaTokens = []
         transcriptionTime = ""
     }
@@ -130,6 +188,7 @@ final class TranscriptionService: ObservableObject {
         let milliseconds = Int(interval * 1000)
         return "\(milliseconds)ms (\(mode))"
     }
+    
 }
 
 // MARK: - Speech Recognition Result

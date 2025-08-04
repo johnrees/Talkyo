@@ -24,17 +24,25 @@ final class AudioRecorder: NSObject, ObservableObject {
     private var audioPlayer: AVAudioPlayer?
     private var audioBuffer: [Float] = []
     
+    // MARK: - Callbacks
+    
+    var onAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
+    
     // MARK: - Audio Configuration
     
-    private enum AudioConfig {
-        static let sampleRate: Double = 16000
-        static let bufferSize: AVAudioFrameCount = 2048
-        static let hapticDelay: TimeInterval = 0.1
+    private enum Config {
+        enum Audio {
+            static let sampleRate: Double = 16000
+            static let bufferSize: AVAudioFrameCount = 2048
+        }
         
-        // Haptic feedback IDs
-        static let startHaptic: SystemSoundID = 1519  // Light impact haptic
-        static let stopHaptic: SystemSoundID = 1520   // Medium impact haptic  
-        static let cancelHaptic: SystemSoundID = 1521 // Heavy impact haptic
+        enum Haptic {
+            static let start: SystemSoundID = 1519    // Light impact
+            static let stop: SystemSoundID = 1520     // Medium impact  
+            static let cancel: SystemSoundID = 1521   // Heavy impact
+        }
+        
+        static let recordingDelay: TimeInterval = 0.05
     }
     
     // MARK: - Initialization
@@ -51,10 +59,10 @@ final class AudioRecorder: NSObject, ObservableObject {
         guard let engine = audioEngine, !isRecording else { return }
         
         prepareForRecording()
-        playHaptic(AudioConfig.startHaptic)
+        playHaptic(Config.Haptic.start)
         
         // Small delay to ensure haptic feedback is felt before recording starts
-        DispatchQueue.main.asyncAfter(deadline: .now() + AudioConfig.hapticDelay) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + Config.recordingDelay) { [weak self] in
             self?.beginRecording(with: engine)
         }
     }
@@ -63,7 +71,7 @@ final class AudioRecorder: NSObject, ObservableObject {
         guard isRecording else { return [] }
         
         completeRecording()
-        playHaptic(AudioConfig.stopHaptic)
+        playHaptic(Config.Haptic.stop)
         
         if !audioBuffer.isEmpty {
             saveRecording()
@@ -90,7 +98,7 @@ final class AudioRecorder: NSObject, ObservableObject {
         guard isRecording else { return }
         
         completeRecording()
-        playHaptic(AudioConfig.cancelHaptic)
+        playHaptic(Config.Haptic.cancel)
         
         // Clear the buffer without saving
         audioBuffer.removeAll()
@@ -149,8 +157,11 @@ final class AudioRecorder: NSObject, ObservableObject {
         audioConverter = converter
         
         // Install tap to capture audio
-        inputNode.installTap(onBus: 0, bufferSize: AudioConfig.bufferSize, format: inputFormat) { [weak self] buffer, _ in
+        inputNode.installTap(onBus: 0, bufferSize: Config.Audio.bufferSize, format: inputFormat) { [weak self] buffer, _ in
             self?.processAudioBuffer(buffer)
+            
+            // Send original buffer for live transcription (before conversion)
+            self?.onAudioBuffer?(buffer)
         }
         
         // Start engine
@@ -224,7 +235,7 @@ final class AudioRecorder: NSObject, ObservableObject {
     private func createRecordingFormat() -> AVAudioFormat? {
         AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
-            sampleRate: AudioConfig.sampleRate,
+            sampleRate: Config.Audio.sampleRate,
             channels: 1,
             interleaved: false
         )
@@ -238,7 +249,7 @@ final class AudioRecorder: NSObject, ObservableObject {
         guard let format = createRecordingFormat() else { return nil }
         
         let frameCapacity = AVAudioFrameCount(
-            Double(sourceBuffer.frameLength) * AudioConfig.sampleRate / sourceBuffer.format.sampleRate
+            Double(sourceBuffer.frameLength) * Config.Audio.sampleRate / sourceBuffer.format.sampleRate
         )
         
         return AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity)
@@ -269,14 +280,14 @@ final class AudioRecorder: NSObject, ObservableObject {
     }
     
     private func logRecordingStats() {
-        let duration = Double(audioBuffer.count) / AudioConfig.sampleRate
+        let duration = Double(audioBuffer.count) / Config.Audio.sampleRate
         let sampleCount = audioBuffer.count
         
         print("""
         Recording completed:
         - Duration: \(String(format: "%.2f", duration))s
         - Samples: \(sampleCount)
-        - Sample rate: \(Int(AudioConfig.sampleRate))Hz
+        - Sample rate: \(Int(Config.Audio.sampleRate))Hz
         """)
     }
 }
