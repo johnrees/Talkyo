@@ -1,5 +1,18 @@
 # Talkyo Development Roadmap
 
+## Phase 0: Visual Improvements (Current Priority)
+
+### 0.1 Ruby Text (Furigana) Display ⭐ NEXT
+- [ ] Replace current two-line display with proper ruby text (furigana above kanji)
+- [ ] Research iOS text rendering options:
+  - NSAttributedString with kCTRubyAnnotationAttributeName
+  - Custom SwiftUI view with Text overlays
+  - Web view with HTML ruby tags (fallback option)
+- [ ] Create RubyTextView component that positions hiragana above kanji
+- [ ] Handle text wrapping and sizing appropriately
+- [ ] Ensure proper alignment between base text and ruby annotations
+- [ ] Test with various text lengths and kanji combinations
+
 ## Phase 1: Core Enhancements
 
 ### 1.1 Save Transcriptions & Recordings
@@ -59,6 +72,12 @@
 
 ## Technical Considerations
 
+### Ruby Text Implementation
+- Core Text framework with CTRubyAnnotation for native rendering
+- Consider performance with large amounts of text
+- Handle edge cases (long readings, compound words)
+- Accessibility support for VoiceOver
+
 ### Audio Processing
 - Investigate Core Audio for pitch detection
 - Consider using Accelerate framework for FFT analysis
@@ -80,6 +99,7 @@
 - Background process heavy computations
 
 ## Dependencies to Research
+- [ ] Ruby text: Core Text CTRubyAnnotation API
 - [ ] Pitch detection: TarsosDSP-iOS or custom implementation
 - [ ] Translation: Apple Translation framework requirements
 - [ ] Karaoke timing: AVSpeechSynthesizer boundary detection

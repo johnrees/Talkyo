@@ -33,7 +33,10 @@
       "mcp__XcodeBuildMCP__install_app_sim",
       "mcp__XcodeBuildMCP__boot_sim",
       "WebFetch(domain:developer.apple.com)",
-      "mcp__XcodeBuildMCP__build_sim_id_proj"
+      "mcp__XcodeBuildMCP__build_sim_id_proj",
+      "Bash(swift package --version)",
+      "Bash(swift --version)",
+      "Bash(swift package:*)"
     ],
     "deny": []
   }

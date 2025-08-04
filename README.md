@@ -1,49 +1,62 @@
-# Talkyo - Japanese Voice Transcription App
+# Talkyo
 
-A simple iOS app that transcribes Japanese speech using WhisperKit.
+A simple iOS app for Japanese speech transcription with furigana generation.
 
 ## Features
 
-- Push-to-talk recording
-- Real-time Japanese speech transcription  
-- Automatic furigana generation for kanji
-- Recording playback
-- Clean, minimal UI
+- **Push-to-Talk Recording**: Hold to record, release to transcribe
+- **Japanese Speech Recognition**: Uses Apple's Speech Recognition framework
+- **Automatic Furigana**: Generates hiragana readings for kanji
+- **Recognition Modes**: Choose between on-device (fast/private), server (accurate), or hybrid
+- **Automatic Punctuation**: Adds periods and commas based on speech patterns
+- **Audio Playback**: Review your recordings after transcription
 
 ## Requirements
 
 - iOS 18.0+
-- iPhone or iPad
-- ~50MB for Whisper model
+- Xcode 16.0+
+- Physical iOS device (audio features don't work in simulator)
 
 ## Setup
 
-1. Open in Xcode
-2. Build and run on device (not simulator)
-3. Grant microphone permissions
-4. Model downloads automatically on first launch
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/talkyo.git
+   cd talkyo
+   ```
+
+2. Open the project in Xcode:
+   ```bash
+   open Talkyo.xcodeproj
+   ```
+
+3. Select your development team in the project settings
+
+4. Build and run on a physical device (not simulator)
+
+## Permissions
+
+The app will request the following permissions on first launch:
+- **Microphone**: Required for audio recording
+- **Speech Recognition**: Required for transcription
 
 ## Usage
 
-1. Hold the blue microphone button to record
-2. Release to transcribe
-3. View transcription with furigana
-4. Tap green button to replay recording
+1. Launch the app
+2. Select your preferred recognition mode (On-Device, Server, or Hybrid)
+3. Press and hold the microphone button to record
+4. Release to stop recording and start transcription
+5. View the transcribed text with furigana reading below
+6. Tap the play button to review your recording
 
 ## Architecture
 
-```
-Talkyo/
-├── ContentView.swift          # Main UI
-├── TranscriptionService.swift # Coordinates workflow
-├── WhisperModelHandler.swift  # WhisperKit integration
-├── AudioRecorder.swift        # Audio recording/playback
-└── FuriganaGenerator.swift    # Japanese text processing
-```
+See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
 
-## Technical Details
+## Development
 
-- Uses WhisperKit for on-device transcription
-- Records at 16kHz for Whisper compatibility
-- Generates furigana using iOS Japanese tokenizer
-- All processing done on-device
+See [TODO.md](TODO.md) for the development roadmap.
+
+## License
+
+[Add your license here]

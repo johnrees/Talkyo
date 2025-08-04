@@ -83,3 +83,7 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Microphone and speech recognition permissions required
 - Minimum iOS 18.0 for latest features
 - Uses SwiftUI and Combine for reactive UI updates
+
+## Future Development
+
+See [TODO.md](TODO.md) for the complete development roadmap. The next priority is implementing proper ruby text (furigana) display with hiragana positioned above kanji characters, similar to manga formatting.

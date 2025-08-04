@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(
@@ -6,13 +6,11 @@ let package = Package(
     platforms: [
         .iOS(.v18)
     ],
-    dependencies: [
-        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.1.0")
-    ],
+    dependencies: [],
     targets: [
         .target(
             name: "Talkyo",
-            dependencies: ["WhisperKit"]
+            dependencies: []
         )
     ]
 )
