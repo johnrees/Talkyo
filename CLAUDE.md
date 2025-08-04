@@ -6,12 +6,11 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 ## Architecture
 
 ### ContentView.swift
-- Main UI with push-to-talk interface
+- Push-to-talk interface with swipe-to-cancel gesture
 - Speech recognition mode selector (On-Device, Server, Hybrid)
-- Displays transcription results with furigana (ruby text) above kanji
+- Displays transcription results with furigana above kanji
 - Playback controls for recorded audio
-- Clean separation of view components
-- 0.2s delay after button release before stopping recording to catch end of speech
+- 0.2s delay after button release to catch end of speech
 
 ### TranscriptionService.swift
 - Central coordinator for the transcription workflow
@@ -31,12 +30,10 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Implements SFSpeechRecognizerDelegate for availability monitoring
 
 ### AudioRecorder.swift
-- Handles audio recording and playback functionality
-- Records at 16kHz mono in WAV format
-- System sound feedback (beeps) for recording start/stop
-- 0.5s delay after start beep to prevent audio bleeding
-- Clean separation of recording, processing, and file management
-- Proper memory management and resource cleanup
+- Audio recording and playback in 16kHz mono WAV format
+- Haptic feedback for recording start/stop/cancel
+- Supports cancelling recordings mid-capture
+- Saves recordings to app's documents directory
 
 ### FuriganaGenerator.swift
 - Generates hiragana readings for Japanese text
@@ -51,36 +48,30 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Checks for kanji and katakana characters
 
 ### FuriganaTextView.swift
-- SwiftUI view for displaying Japanese text with furigana above kanji
-- Uses HStack with VStack overlays for proper alignment
-- Displays small hiragana (50% font size) above kanji characters
-- Aligns non-kanji text properly with furigana baseline
-- Uses KosugiMaru-Regular font for better Japanese text rendering
-- Bold font weight for main text, semibold for furigana
+- Displays Japanese text with furigana (ruby text) above kanji
+- Uses KosugiMaru-Regular font with bold/semibold weights
+- 50% font size for furigana readings
 
 ## Key Features
 
-1. **Push-to-Talk**: Hold button to record, release to transcribe
-2. **Recognition Modes**: Choose between on-device, server, or hybrid recognition
-3. **Automatic Punctuation**: Adds periods, commas, and question marks based on speech patterns
-4. **Furigana Display**: Shows hiragana readings directly above kanji characters (ruby text)
+1. **Push-to-Talk**: Hold to record, release to transcribe, swipe away to cancel
+2. **Recognition Modes**: On-device (fast/private), server (accurate), or hybrid
+3. **Automatic Punctuation**: Adds punctuation based on speech patterns
+4. **Furigana Display**: Hiragana readings above kanji characters
 5. **Audio Playback**: Review recordings after transcription
-6. **Audio Feedback**: System beeps indicate recording start/stop
-7. **Performance Metrics**: Displays transcription time and recognition mode used
+6. **Haptic Feedback**: Tactile feedback for recording actions
+7. **Performance Metrics**: Shows transcription time and mode used
 
 ## Technical Details
 
 ### Audio Configuration
-- Sample rate: 16kHz mono
-- Format: WAV (PCM Float32)
-- System sounds: 1113 (start), 1114 (stop)
-- 0.5 second delay after start beep to prevent audio bleed
+- Sample rate: 16kHz mono WAV format
+- Haptic feedback: Light (start), Medium (stop), Heavy (cancel)
 - Files saved to app's documents directory
 
 ### Speech Recognition
 - Locale: ja-JP (Japanese)
-- Punctuation: Enabled for iOS 16+
-- Task hint: Dictation mode for optimal punctuation
+- Automatic punctuation enabled
 - Supports on-device and server-based recognition
 
 ## Code Architecture Principles
@@ -113,9 +104,9 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Applied bold weight to main text and semibold to furigana for improved readability
 
 ### Recording Improvements (Completed)
-- Added 0.2s delay after button release before stopping recording
-- Prevents cutting off speech when users release button while still speaking
-- Maintains snappy and responsive UI feel
+- Added 0.2s delay after button release to prevent cutting off speech
+- Swipe-to-cancel gesture for discarding recordings
+- Replaced audio beeps with haptic feedback for all recording actions
 
 ## Future Development
 

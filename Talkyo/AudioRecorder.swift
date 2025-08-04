@@ -29,11 +29,12 @@ final class AudioRecorder: NSObject, ObservableObject {
     private enum AudioConfig {
         static let sampleRate: Double = 16000
         static let bufferSize: AVAudioFrameCount = 2048
-        static let beepDelay: TimeInterval = 0.5
+        static let hapticDelay: TimeInterval = 0.1
         
-        // System sounds
-        static let startBeepSound: SystemSoundID = 1113
-        static let stopBeepSound: SystemSoundID = 1114
+        // Haptic feedback IDs
+        static let startHaptic: SystemSoundID = 1519  // Light impact haptic
+        static let stopHaptic: SystemSoundID = 1520   // Medium impact haptic  
+        static let cancelHaptic: SystemSoundID = 1521 // Heavy impact haptic
     }
     
     // MARK: - Initialization
@@ -50,10 +51,10 @@ final class AudioRecorder: NSObject, ObservableObject {
         guard let engine = audioEngine, !isRecording else { return }
         
         prepareForRecording()
-        playBeep(AudioConfig.startBeepSound)
+        playHaptic(AudioConfig.startHaptic)
         
-        // Delay recording to allow beep to finish
-        DispatchQueue.main.asyncAfter(deadline: .now() + AudioConfig.beepDelay) { [weak self] in
+        // Small delay to ensure haptic feedback is felt before recording starts
+        DispatchQueue.main.asyncAfter(deadline: .now() + AudioConfig.hapticDelay) { [weak self] in
             self?.beginRecording(with: engine)
         }
     }
@@ -62,7 +63,7 @@ final class AudioRecorder: NSObject, ObservableObject {
         guard isRecording else { return [] }
         
         completeRecording()
-        playBeep(AudioConfig.stopBeepSound)
+        playHaptic(AudioConfig.stopHaptic)
         
         if !audioBuffer.isEmpty {
             saveRecording()
@@ -83,6 +84,18 @@ final class AudioRecorder: NSObject, ObservableObject {
         } catch {
             print("Playback failed: \(error)")
         }
+    }
+    
+    func cancelRecording() {
+        guard isRecording else { return }
+        
+        completeRecording()
+        playHaptic(AudioConfig.cancelHaptic)
+        
+        // Clear the buffer without saving
+        audioBuffer.removeAll()
+        recordedFileURL = nil
+        hasRecording = false
     }
     
     // MARK: - Private Methods - Setup
@@ -251,8 +264,8 @@ final class AudioRecorder: NSObject, ObservableObject {
         return documentsPath.appendingPathComponent("recording.wav")
     }
     
-    private func playBeep(_ soundID: SystemSoundID) {
-        AudioServicesPlaySystemSound(soundID)
+    private func playHaptic(_ hapticID: SystemSoundID) {
+        AudioServicesPlaySystemSound(hapticID)
     }
     
     private func logRecordingStats() {

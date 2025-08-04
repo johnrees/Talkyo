@@ -78,21 +78,21 @@ struct ContentView: View {
                 }
             }
             
-            RecordButton(isRecording: $isRecording) {
-                handleRecordingToggle()
-            }
+            RecordButton(
+                isRecording: $isRecording,
+                startAction: {
+                    transcriptionService.startRecording()
+                },
+                stopAction: {
+                    transcriptionService.stopRecording()
+                },
+                cancelAction: {
+                    transcriptionService.cancelRecording()
+                }
+            )
         }
     }
     
-    // MARK: - Actions
-    
-    private func handleRecordingToggle() {
-        if isRecording {
-            transcriptionService.startRecording()
-        } else {
-            transcriptionService.stopRecording()
-        }
-    }
 }
 
 // MARK: - Transcription Display
@@ -173,11 +173,16 @@ struct TranscriptionDisplay: View {
 
 struct RecordButton: View {
     @Binding var isRecording: Bool
-    let action: () -> Void
+    let startAction: () -> Void
+    let stopAction: () -> Void
+    let cancelAction: () -> Void
     
     private let buttonSize: CGFloat = 120
     private let iconSize: CGFloat = 50
+    private let cancelThreshold: CGFloat = 100
     @State private var stopTimer: Timer?
+    @State private var isDraggingToCancel = false
+    @State private var dragOffset: CGSize = .zero
     
     var body: some View {
         Button(action: {}) {
@@ -187,7 +192,7 @@ struct RecordButton: View {
     }
     
     private var recordButtonContent: some View {
-        Image(systemName: isRecording ? "mic.fill" : "mic")
+        Image(systemName: buttonIcon)
             .font(.system(size: iconSize))
             .foregroundColor(.white)
             .frame(width: buttonSize, height: buttonSize)
@@ -195,29 +200,61 @@ struct RecordButton: View {
             .clipShape(Circle())
             .scaleEffect(isRecording ? 1.1 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isRecording)
+            .animation(.easeInOut(duration: 0.15), value: isDraggingToCancel)
+    }
+    
+    private var buttonIcon: String {
+        if isDraggingToCancel {
+            return "xmark.circle.fill"
+        } else {
+            return isRecording ? "mic.fill" : "mic"
+        }
     }
     
     private var recordingBackground: Color {
-        isRecording ? .red : .blue
+        if isDraggingToCancel {
+            return .orange
+        } else {
+            return isRecording ? .red : .blue
+        }
     }
     
     private var pushToTalkGesture: some Gesture {
         DragGesture(minimumDistance: 0)
-            .onChanged { _ in
+            .onChanged { value in
                 stopTimer?.invalidate()
                 stopTimer = nil
                 
                 if !isRecording {
                     isRecording = true
-                    action()
+                    isDraggingToCancel = false
+                    startAction()
+                } else {
+                    // Check if dragged far enough to trigger cancel
+                    let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                    isDraggingToCancel = distance > cancelThreshold
+                    dragOffset = value.translation
                 }
             }
-            .onEnded { _ in
+            .onEnded { value in
                 if isRecording {
-                    // Add 0.2s delay before stopping
-                    stopTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
+                    let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
+                    let shouldCancel = distance > cancelThreshold
+                    
+                    if shouldCancel {
+                        // Cancel the recording
                         isRecording = false
-                        action()
+                        isDraggingToCancel = false
+                        dragOffset = .zero
+                        cancelAction()
+                    } else {
+                        // Normal stop with delay
+                        isDraggingToCancel = false
+                        dragOffset = .zero
+                        stopTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
+                            isRecording = false
+                            stopAction()
+                        }
                     }
                 }
             }

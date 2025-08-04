@@ -60,6 +60,11 @@ final class TranscriptionService: ObservableObject {
         audioRecorder.playRecording()
     }
     
+    func cancelRecording() {
+        audioRecorder.cancelRecording()
+        clearTranscription()
+    }
+    
     // MARK: - Private Methods
     
     private func setupObservers() {
