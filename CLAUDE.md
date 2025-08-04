@@ -8,7 +8,7 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 ### ContentView.swift
 - Main UI with push-to-talk interface
 - Speech recognition mode selector (On-Device, Server, Hybrid)
-- Displays transcription results with original text and full kana reading
+- Displays transcription results with furigana (ruby text) above kanji
 - Playback controls for recorded audio
 - Clean separation of view components
 
@@ -40,15 +40,27 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 ### FuriganaGenerator.swift
 - Generates hiragana readings for Japanese text
 - Uses iOS Japanese tokenizer for accurate readings
+- Returns array of FuriganaToken objects pairing text with readings
 - Filters out unnecessary furigana (when identical to input)
 - Implemented as a stateless enum with static methods
+
+### FuriganaToken.swift
+- Data structure representing a text segment with optional furigana reading
+- Contains logic to determine if furigana display is needed
+- Checks for kanji and katakana characters
+
+### FuriganaTextView.swift
+- SwiftUI view for displaying Japanese text with furigana above kanji
+- Uses HStack with VStack overlays for proper alignment
+- Displays small hiragana (50% font size) above kanji characters
+- Aligns non-kanji text properly with furigana baseline
 
 ## Key Features
 
 1. **Push-to-Talk**: Hold button to record, release to transcribe
 2. **Recognition Modes**: Choose between on-device, server, or hybrid recognition
 3. **Automatic Punctuation**: Adds periods, commas, and question marks based on speech patterns
-4. **Dual Display**: Shows original transcribed text with full hiragana reading below
+4. **Furigana Display**: Shows hiragana readings directly above kanji characters (ruby text)
 5. **Audio Playback**: Review recordings after transcription
 6. **Audio Feedback**: System beeps indicate recording start/stop
 7. **Performance Metrics**: Displays transcription time and recognition mode used
@@ -84,6 +96,14 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - Minimum iOS 18.0 for latest features
 - Uses SwiftUI and Combine for reactive UI updates
 
+## Recent Updates
+
+### Furigana Implementation (Completed)
+- Successfully implemented proper ruby text (furigana) display
+- Hiragana readings now appear directly above kanji characters
+- Uses SwiftUI approach for reliable and maintainable implementation
+- Proper alignment ensures clean visual presentation
+
 ## Future Development
 
-See [TODO.md](TODO.md) for the complete development roadmap. The next priority is implementing proper ruby text (furigana) display with hiragana positioned above kanji characters, similar to manga formatting.
+See [TODO.md](TODO.md) for the complete development roadmap. The next priorities include saving transcriptions, adding English translation, and implementing pitch accent detection.

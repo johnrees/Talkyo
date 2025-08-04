@@ -27,6 +27,7 @@ enum FuriganaGenerator {
     static func generateTokens(for text: String) -> [FuriganaToken] {
         let tokenizer = createJapaneseTokenizer(for: text)
         var tokens: [FuriganaToken] = []
+        var lastEndIndex = text.startIndex
         
         var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
         
@@ -34,12 +35,25 @@ enum FuriganaGenerator {
             let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
             let startIndex = text.index(text.startIndex, offsetBy: range.location)
             let endIndex = text.index(startIndex, offsetBy: range.length)
-            let tokenText = String(text[startIndex..<endIndex])
             
+            // Add any skipped characters (like punctuation) between tokens
+            if lastEndIndex < startIndex {
+                let skippedText = String(text[lastEndIndex..<startIndex])
+                tokens.append(FuriganaToken(text: skippedText, reading: nil))
+            }
+            
+            let tokenText = String(text[startIndex..<endIndex])
             let reading = extractHiraganaReading(from: tokenizer)
             tokens.append(FuriganaToken(text: tokenText, reading: reading))
             
+            lastEndIndex = endIndex
             tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+        }
+        
+        // Add any remaining characters at the end
+        if lastEndIndex < text.endIndex {
+            let remainingText = String(text[lastEndIndex..<text.endIndex])
+            tokens.append(FuriganaToken(text: remainingText, reading: nil))
         }
         
         return tokens

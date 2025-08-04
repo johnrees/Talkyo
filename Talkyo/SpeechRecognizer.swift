@@ -115,6 +115,12 @@ final class SpeechRecognizer: NSObject, ObservableObject {
             request.taskHint = .dictation
         }
         
+        // Additional settings for iOS 18+
+        if #available(iOS 18.0, *) {
+            // Ensure punctuation is enabled for iOS 18
+            request.addsPunctuation = true
+        }
+        
         // Apply configuration mode
         configureRecognitionMode(for: request)
         
