@@ -1,13 +1,14 @@
 # Talkyo - iOS Japanese Voice Transcription App
 
 ## Overview
-Talkyo is a simple iOS app for Japanese speech transcription using WhisperKit. It features push-to-talk recording, real-time transcription, and automatic furigana generation.
+Talkyo is a simple iOS app for Japanese speech transcription using Apple's Core ML Speech Recognition. It features push-to-talk recording, real-time transcription, and automatic furigana generation.
 
 ## Architecture
 
 ### ContentView.swift
 - Main UI with push-to-talk button
-- Displays transcription results
+- Core ML configuration selector (On-Device, Server, Hybrid)
+- Displays transcription results with kanji and kana on separate lines
 - Shows playback button when recording exists
 
 ### TranscriptionService.swift
@@ -15,15 +16,17 @@ Talkyo is a simple iOS app for Japanese speech transcription using WhisperKit. I
 - Manages app state and UI updates
 - Handles timing and error cases
 
-### WhisperModelHandler.swift
-- Wraps WhisperKit for Japanese transcription
-- Loads and manages the Whisper model
-- Configures optimal settings for Japanese
+### CoreMLModelHandler.swift
+- Wraps Apple's Speech Recognition framework
+- Supports three modes:
+  - On-Device: Fast, private, works offline
+  - Server: More accurate, requires internet
+  - Hybrid: System chooses best option
+- Configured for Japanese (ja-JP) recognition
 
 ### AudioRecorder.swift
 - Handles audio recording and playback
-- Converts audio to 16kHz for Whisper
-- Saves recordings as WAV files
+- Saves recordings as WAV files at 16kHz
 - Plays system beeps before/after recording
 - 0.5s delay after start beep to prevent audio bleed
 
@@ -35,10 +38,11 @@ Talkyo is a simple iOS app for Japanese speech transcription using WhisperKit. I
 ## Key Features
 
 1. **Push-to-Talk**: Hold button to record, release to transcribe
-2. **Japanese Optimization**: Forced Japanese language detection
-3. **Furigana Support**: Automatic readings for kanji/katakana
+2. **Core ML Options**: Choose between on-device, server, or hybrid recognition
+3. **Dual Display**: Shows original text (kanji) and full kana reading below
 4. **Playback**: Review recordings after transcription
 5. **Audio Feedback**: Beep sounds indicate recording start/stop
+6. **Performance Metrics**: Shows transcription time and mode used
 
 ## Technical Notes
 
@@ -57,7 +61,7 @@ Talkyo is a simple iOS app for Japanese speech transcription using WhisperKit. I
 
 ## Future Enhancements
 
-- Multiple model size options
 - Transcription history
 - Export functionality
 - Dictionary integration
+- True furigana display (ruby text above kanji)

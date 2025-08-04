@@ -7,25 +7,6 @@
 
 import SwiftUI
 
-enum TranscriptionEngine: String, CaseIterable {
-    case whisper = "Whisper"
-    case coreML = "Core ML"
-}
-
-enum WhisperModelSize: String, CaseIterable {
-    case tiny = "tiny"
-    case base = "base"
-    case small = "small"
-    
-    var displayName: String {
-        switch self {
-        case .tiny: return "Tiny (39M)"
-        case .base: return "Base (74M)"
-        case .small: return "Small (244M)"
-        }
-    }
-}
-
 enum CoreMLConfiguration: String, CaseIterable {
     case onDevice = "On-Device"
     case server = "Server"
@@ -43,61 +24,27 @@ enum CoreMLConfiguration: String, CaseIterable {
 struct ContentView: View {
     @StateObject private var transcriptionService = TranscriptionService()
     @State private var isRecording = false
-    @State private var selectedEngine = TranscriptionEngine.whisper
-    @State private var selectedModelSize = WhisperModelSize.tiny
     @State private var selectedCoreMLConfig = CoreMLConfiguration.onDevice
     
     var body: some View {
         VStack(spacing: 20) {
-            Picker("Engine", selection: $selectedEngine) {
-                ForEach(TranscriptionEngine.allCases, id: \.self) { engine in
-                    Text(engine.rawValue).tag(engine)
+            VStack(spacing: 10) {
+                Text("Recognition Mode")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                
+                Picker("Mode", selection: $selectedCoreMLConfig) {
+                    ForEach(CoreMLConfiguration.allCases, id: \.self) { config in
+                        Text(config.rawValue).tag(config)
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding(.horizontal)
+                .onChange(of: selectedCoreMLConfig) { newValue in
+                    transcriptionService.setCoreMLConfiguration(newValue)
                 }
             }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding(.horizontal)
             .padding(.top, 20)
-            .onChange(of: selectedEngine) { newValue in
-                transcriptionService.setEngine(newValue)
-            }
-            
-            if selectedEngine == .whisper {
-                VStack(spacing: 10) {
-                    Text("Model Size")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    
-                    Picker("Model Size", selection: $selectedModelSize) {
-                        ForEach(WhisperModelSize.allCases, id: \.self) { size in
-                            Text(size.displayName).tag(size)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal)
-                    .onChange(of: selectedModelSize) { newValue in
-                        transcriptionService.setWhisperModel(newValue)
-                    }
-                }
-                .transition(.opacity)
-            } else if selectedEngine == .coreML {
-                VStack(spacing: 10) {
-                    Text("Recognition Mode")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    
-                    Picker("Mode", selection: $selectedCoreMLConfig) {
-                        ForEach(CoreMLConfiguration.allCases, id: \.self) { config in
-                            Text(config.rawValue).tag(config)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal)
-                    .onChange(of: selectedCoreMLConfig) { newValue in
-                        transcriptionService.setCoreMLConfiguration(newValue)
-                    }
-                }
-                .transition(.opacity)
-            }
             
             TranscriptionView(
                 text: transcriptionService.transcribedText,
@@ -129,7 +76,6 @@ struct ContentView: View {
             }
             .padding(.bottom, 50)
         }
-        .animation(.easeInOut(duration: 0.3), value: selectedEngine)
     }
 }
 
@@ -140,24 +86,34 @@ struct TranscriptionView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 10) {
+            VStack(spacing: 15) {
                 if text.isEmpty {
                     Text("話してください")
                         .font(.title2)
                         .foregroundColor(.gray)
                         .padding()
                 } else {
-                    // For now, show text with furigana in parentheses
-                    Text(formatTextWithInlineFurigana(text: text, furigana: furigana))
-                        .font(.system(size: 28))
+                    // Show original text with kanji
+                    Text(text)
+                        .font(.system(size: 32))
                         .multilineTextAlignment(.center)
-                        .padding()
+                        .padding(.horizontal)
+                    
+                    // Show kana reading below
+                    if !furigana.isEmpty {
+                        Text(extractKanaReading(furigana: furigana))
+                            .font(.system(size: 20))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
                 }
                 
                 if !time.isEmpty {
                     Text(time)
                         .font(.caption)
                         .foregroundColor(.blue)
+                        .padding(.top, 5)
                 }
             }
             .padding(.vertical)
@@ -168,21 +124,20 @@ struct TranscriptionView: View {
         .padding(.horizontal)
     }
     
-    private func formatTextWithInlineFurigana(text: String, furigana: String) -> String {
-        guard !furigana.isEmpty else { return text }
-        
-        // For display, show furigana inline with parentheses
-        var result = text
+    private func extractKanaReading(furigana: String) -> String {
+        // Convert furigana format to full kana reading
+        var result = ""
         let components = furigana.components(separatedBy: " ")
         
-        for component in components.reversed() {
+        for component in components {
             if component.contains("(") && component.contains(")") {
                 let parts = component.split(separator: "(", maxSplits: 1)
                 if parts.count == 2 {
-                    let kanji = String(parts[0])
-                    let reading = String(parts[1].dropLast())
-                    result = result.replacingOccurrences(of: kanji, with: "\(kanji)(\(reading))")
+                    let reading = String(parts[1].dropLast()) // Remove closing parenthesis
+                    result += reading
                 }
+            } else {
+                result += component
             }
         }
         
