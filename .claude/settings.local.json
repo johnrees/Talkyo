@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:claude.ai)",
+      "Bash(claude mcp)",
+      "Bash(claude mcp add-json XcodeBuildMCP '{\"\"command\"\": \"\"npx\"\", \"\"args\"\": [\"\"-y\"\", \"\"xcodebuildmcp@latest\"\"]}')",
+      "Bash(claude mcp:*)",
+      "mcp__XcodeBuildMCP__discover_projs",
+      "mcp__XcodeBuildMCP__list_sims",
+      "mcp__XcodeBuildMCP__list_schems_proj",
+      "mcp__XcodeBuildMCP__build_run_sim_name_proj",
+      "Bash(rm:*)",
+      "mcp__XcodeBuildMCP__screenshot",
+      "mcp__XcodeBuildMCP__describe_ui",
+      "mcp__XcodeBuildMCP__tap",
+      "mcp__XcodeBuildMCP__start_sim_log_cap",
+      "mcp__XcodeBuildMCP__long_press",
+      "mcp__XcodeBuildMCP__stop_sim_log_cap",
+      "mcp__XcodeBuildMCP__launch_app_logs_sim",
+      "mcp__XcodeBuildMCP__list_devices",
+      "mcp__XcodeBuildMCP__build_dev_proj",
+      "mcp__XcodeBuildMCP__get_device_app_path_proj",
+      "mcp__XcodeBuildMCP__install_app_device",
+      "mcp__XcodeBuildMCP__launch_app_device",
+      "Bash(mv:*)",
+      "mcp__XcodeBuildMCP__get_app_bundle_id",
+      "WebFetch(domain:huggingface.co)",
+      "WebFetch(domain:github.com)",
+      "mcp__XcodeBuildMCP__clean_proj",
+      "mcp__XcodeBuildMCP__start_device_log_cap"
+    ],
+    "deny": []
+  }
+}
