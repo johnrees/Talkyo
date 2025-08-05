@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Translation
 
 // MARK: - Speech Recognition Configuration
 
@@ -142,6 +143,11 @@ struct TranscriptionDisplay: View {
     
     private let placeholderText = "話してください"
     
+    @State private var configuration: TranslationSession.Configuration?
+    @State private var translatedText = ""
+    @State private var translationAvailable = false
+    @State private var previousText = ""
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -161,6 +167,64 @@ struct TranscriptionDisplay: View {
         .background(Color(.systemGray6))
         .cornerRadius(12)
         .padding(.horizontal)
+        .onAppear {
+            checkTranslationAvailability()
+        }
+        .translationTask(configuration) { session in
+            guard translationAvailable,
+                  !transcribedText.isEmpty,
+                  !transcribedText.starts(with: "Error:") else {
+                print("Translation: Skipping - not ready")
+                return
+            }
+            
+            do {
+                print("Translation: Starting translation of '\(transcribedText)'")
+                let response = try await session.translate(transcribedText)
+                print("Translation: Success - '\(response.targetText)'")
+                
+                await MainActor.run {
+                    self.translatedText = response.targetText
+                }
+            } catch {
+                print("Translation error: \(error)")
+                await MainActor.run {
+                    self.translatedText = ""
+                }
+            }
+        }
+        .onChange(of: transcribedText) { _, newValue in
+            print("Translation: Text changed from '\(previousText)' to '\(newValue)'")
+            
+            if !newValue.isEmpty && !newValue.starts(with: "Error:") && translationAvailable {
+                // Only update configuration if text actually changed
+                if newValue != previousText {
+                    print("Translation: Creating new configuration for text: '\(newValue)'")
+                    translatedText = "" // Clear old translation first
+                    
+                    // IMPORTANT: Set to nil first to force translationTask to re-trigger
+                    configuration = nil
+                    
+                    // Then set new configuration after a small delay
+                    Task {
+                        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+                        await MainActor.run {
+                            configuration = TranslationSession.Configuration(
+                                source: Locale.Language(identifier: "ja"),
+                                target: Locale.Language(identifier: "en-GB")
+                            )
+                        }
+                    }
+                    
+                    previousText = newValue
+                }
+            } else {
+                print("Translation: Clearing translation (empty or error text)")
+                translatedText = ""
+                configuration = nil
+                previousText = ""
+            }
+        }
     }
     
     private var placeholderView: some View {
@@ -171,7 +235,8 @@ struct TranscriptionDisplay: View {
     }
     
     private var transcriptionContent: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 20) {
+            // Japanese text with furigana
             if !furiganaTokens.isEmpty {
                 // Ruby text display with furigana above kanji
                 FuriganaTextView(
@@ -186,7 +251,31 @@ struct TranscriptionDisplay: View {
                     .font(.system(size: 32))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                
+            }
+            
+            // English translation
+            if !translatedText.isEmpty {
+                VStack(spacing: 8) {
+                    Divider()
+                        .padding(.horizontal, 40)
+                    
+                    Text(translatedText)
+                        .font(.system(size: 20))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+            } else if !transcribedText.isEmpty && !translationAvailable {
+                VStack(spacing: 8) {
+                    Divider()
+                        .padding(.horizontal, 40)
+                    
+                    Text("Translation not available - Language packs may need to be downloaded")
+                        .font(.system(size: 14))
+                        .foregroundColor(.orange)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
             }
         }
     }
@@ -197,6 +286,39 @@ struct TranscriptionDisplay: View {
             .foregroundColor(.blue)
             .padding(.top, 4)
     }
+    
+    private func checkTranslationAvailability() {
+        Task {
+            let availability = LanguageAvailability()
+            
+            // Check for English (UK) first, then fall back to generic English
+            let englishUK = await availability.status(
+                from: Locale.Language(identifier: "ja"),
+                to: Locale.Language(identifier: "en-GB")
+            )
+            
+            let englishUS = await availability.status(
+                from: Locale.Language(identifier: "ja"),
+                to: Locale.Language(identifier: "en-US")
+            )
+            
+            let englishGeneric = await availability.status(
+                from: Locale.Language(identifier: "ja"),
+                to: Locale.Language(identifier: "en")
+            )
+            
+            await MainActor.run {
+                if englishUK == .installed || englishUS == .installed || englishGeneric == .installed {
+                    translationAvailable = true
+                    print("Translation: Languages are installed (UK: \(englishUK), US: \(englishUS), Generic: \(englishGeneric))")
+                } else {
+                    translationAvailable = false
+                    print("Translation: Languages not installed (UK: \(englishUK), US: \(englishUS), Generic: \(englishGeneric))")
+                }
+            }
+        }
+    }
+    
 }
 
 // MARK: - Record Button

@@ -37,7 +37,8 @@
       "Bash(swift package --version)",
       "Bash(swift --version)",
       "Bash(swift package:*)",
-      "mcp__XcodeBuildMCP__build_sim_name_proj"
+      "mcp__XcodeBuildMCP__build_sim_name_proj",
+      "Bash(xcodebuild:*)"
     ],
     "deny": []
   }
