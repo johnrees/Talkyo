@@ -129,15 +129,23 @@ final class TranscriptionService: ObservableObject {
     private func processRecording() async {
         let audioData = audioRecorder.stopRecording()
         
+        print("TranscriptionService: Processing recording with \(audioData.count) samples")
+        
         guard !audioData.isEmpty,
               let recordingURL = audioRecorder.recordedFileURL else {
+            print("TranscriptionService: No audio data or URL")
             transcribedText = "No audio recorded"
             return
         }
         
+        print("TranscriptionService: Recording URL: \(recordingURL), mode: \(transcriptionMode)")
+        
         // Only transcribe if in standard mode (live mode already transcribed)
         if transcriptionMode == .standard {
+            print("TranscriptionService: Starting standard transcription")
             await transcribeAudio(from: recordingURL)
+        } else {
+            print("TranscriptionService: Skipping transcription (live mode)")
         }
     }
     
@@ -147,9 +155,13 @@ final class TranscriptionService: ObservableObject {
         
         let startTime = Date()
         
+        print("TranscriptionService: Calling speechRecognizer.transcribe")
+        
         do {
             let result = try await speechRecognizer.transcribe(audioURL: url)
             let elapsedTime = Date().timeIntervalSince(startTime)
+            
+            print("TranscriptionService: Transcription result: '\(result.text)'")
             
             updateTranscription(
                 text: result.text,
@@ -157,6 +169,7 @@ final class TranscriptionService: ObservableObject {
                 elapsedTime: elapsedTime
             )
         } catch {
+            print("TranscriptionService: Transcription error: \(error)")
             handleTranscriptionError(error)
         }
     }

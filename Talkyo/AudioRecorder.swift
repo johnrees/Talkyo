@@ -41,8 +41,6 @@ final class AudioRecorder: NSObject, ObservableObject {
             static let stop: SystemSoundID = 1520     // Medium impact  
             static let cancel: SystemSoundID = 1521   // Heavy impact
         }
-        
-        static let recordingDelay: TimeInterval = 0.05
     }
     
     // MARK: - Initialization
@@ -56,15 +54,14 @@ final class AudioRecorder: NSObject, ObservableObject {
     // MARK: - Public Methods
     
     func startRecording() {
-        guard let engine = audioEngine, !isRecording else { return }
+        guard !isRecording else { return }
         
         prepareForRecording()
         playHaptic(Config.Haptic.start)
         
-        // Small delay to ensure haptic feedback is felt before recording starts
-        DispatchQueue.main.asyncAfter(deadline: .now() + Config.recordingDelay) { [weak self] in
-            self?.beginRecording(with: engine)
-        }
+        // Use the fresh engine created in prepareForRecording
+        guard let engine = audioEngine else { return }
+        beginRecording(with: engine)
     }
     
     func stopRecording() -> [Float] {
@@ -143,14 +140,31 @@ final class AudioRecorder: NSObject, ObservableObject {
             engine.stop()
             engine.reset()
         }
+        
+        // Create a fresh audio engine for each recording
+        audioEngine = AVAudioEngine()
     }
     
     private func beginRecording(with engine: AVAudioEngine) {
+        // Ensure audio session is active
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+            try session.setActive(true)
+            print("Audio session activated successfully")
+        } catch {
+            print("Failed to activate audio session: \(error)")
+            return
+        }
+        
         let inputNode = engine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
         
+        print("Input format: \(inputFormat)")
+        
         guard let recordingFormat = createRecordingFormat(),
               let converter = createAudioConverter(from: inputFormat, to: recordingFormat) else {
+            print("Failed to create recording format or converter")
             return
         }
         
@@ -158,6 +172,10 @@ final class AudioRecorder: NSObject, ObservableObject {
         
         // Install tap to capture audio
         inputNode.installTap(onBus: 0, bufferSize: Config.Audio.bufferSize, format: inputFormat) { [weak self] buffer, _ in
+            let frameLength = Int(buffer.frameLength)
+            if frameLength > 0 {
+                print("Captured buffer with \(frameLength) frames")
+            }
             self?.processAudioBuffer(buffer)
             
             // Send original buffer for live transcription (before conversion)
@@ -169,6 +187,7 @@ final class AudioRecorder: NSObject, ObservableObject {
             engine.prepare()
             try engine.start()
             isRecording = true
+            print("Audio engine started successfully")
         } catch {
             print("Failed to start recording: \(error)")
             inputNode.removeTap(onBus: 0)
@@ -182,7 +201,6 @@ final class AudioRecorder: NSObject, ObservableObject {
         
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
-        engine.reset()
         audioConverter = nil
         
         logRecordingStats()

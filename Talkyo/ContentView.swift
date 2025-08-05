@@ -133,6 +133,71 @@ struct ContentView: View {
     
 }
 
+// MARK: - Translation View
+
+struct TranslationView: View {
+    let textToTranslate: String
+    @State private var translatedText = ""
+    @State private var configuration: TranslationSession.Configuration?
+    
+    init(textToTranslate: String) {
+        self.textToTranslate = textToTranslate
+        print("TranslationView: Initialized with text '\(textToTranslate)'")
+    }
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Divider()
+                .padding(.horizontal, 40)
+            
+            if !translatedText.isEmpty {
+                Text(translatedText)
+                    .font(.system(size: 20))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            } else {
+                Text("Translating...")
+                    .font(.system(size: 20))
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+        }
+        .onAppear {
+            print("TranslationView: onAppear called for '\(textToTranslate)'")
+            if !textToTranslate.isEmpty && !textToTranslate.starts(with: "Error:") {
+                print("Translation: Creating configuration for '\(textToTranslate)'")
+                configuration = TranslationSession.Configuration(
+                    source: Locale.Language(identifier: "ja"),
+                    target: Locale.Language(identifier: "en-GB")
+                )
+            }
+        }
+        .translationTask(configuration) { session in
+            print("Translation: Task triggered for '\(textToTranslate)'")
+            
+            guard !textToTranslate.isEmpty,
+                  !textToTranslate.starts(with: "Error:") else {
+                print("Translation: Skipping - invalid text")
+                return
+            }
+            
+            do {
+                print("Translation: Starting translation")
+                let response = try await session.translate(textToTranslate)
+                print("Translation: Success - '\(response.targetText)'")
+                
+                await MainActor.run {
+                    self.translatedText = response.targetText
+                }
+            } catch {
+                print("Translation error: \(error)")
+            }
+        }
+    }
+}
+
 // MARK: - Transcription Display
 
 struct TranscriptionDisplay: View {
@@ -143,10 +208,7 @@ struct TranscriptionDisplay: View {
     
     private let placeholderText = "話してください"
     
-    @State private var configuration: TranslationSession.Configuration?
-    @State private var translatedText = ""
     @State private var translationAvailable = false
-    @State private var previousText = ""
     
     var body: some View {
         ScrollView {
@@ -169,61 +231,6 @@ struct TranscriptionDisplay: View {
         .padding(.horizontal)
         .onAppear {
             checkTranslationAvailability()
-        }
-        .translationTask(configuration) { session in
-            guard translationAvailable,
-                  !transcribedText.isEmpty,
-                  !transcribedText.starts(with: "Error:") else {
-                print("Translation: Skipping - not ready")
-                return
-            }
-            
-            do {
-                print("Translation: Starting translation of '\(transcribedText)'")
-                let response = try await session.translate(transcribedText)
-                print("Translation: Success - '\(response.targetText)'")
-                
-                await MainActor.run {
-                    self.translatedText = response.targetText
-                }
-            } catch {
-                print("Translation error: \(error)")
-                await MainActor.run {
-                    self.translatedText = ""
-                }
-            }
-        }
-        .onChange(of: transcribedText) { _, newValue in
-            print("Translation: Text changed from '\(previousText)' to '\(newValue)'")
-            
-            if !newValue.isEmpty && !newValue.starts(with: "Error:") && translationAvailable {
-                // Only update configuration if text actually changed
-                if newValue != previousText {
-                    print("Translation: Creating new configuration for text: '\(newValue)'")
-                    translatedText = "" // Clear old translation first
-                    
-                    // IMPORTANT: Set to nil first to force translationTask to re-trigger
-                    configuration = nil
-                    
-                    // Then set new configuration after a small delay
-                    Task {
-                        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
-                        await MainActor.run {
-                            configuration = TranslationSession.Configuration(
-                                source: Locale.Language(identifier: "ja"),
-                                target: Locale.Language(identifier: "en-GB")
-                            )
-                        }
-                    }
-                    
-                    previousText = newValue
-                }
-            } else {
-                print("Translation: Clearing translation (empty or error text)")
-                translatedText = ""
-                configuration = nil
-                previousText = ""
-            }
         }
     }
     
@@ -254,17 +261,10 @@ struct TranscriptionDisplay: View {
             }
             
             // English translation
-            if !translatedText.isEmpty {
-                VStack(spacing: 8) {
-                    Divider()
-                        .padding(.horizontal, 40)
-                    
-                    Text(translatedText)
-                        .font(.system(size: 20))
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
+            if translationAvailable && !transcribedText.isEmpty && !transcribedText.starts(with: "Error:") {
+                let _ = print("TranscriptionDisplay: Showing TranslationView for '\(transcribedText)'")
+                TranslationView(textToTranslate: transcribedText)
+                    .id(transcribedText) // Force recreation when text changes
             } else if !transcribedText.isEmpty && !translationAvailable {
                 VStack(spacing: 8) {
                     Divider()
@@ -291,6 +291,8 @@ struct TranscriptionDisplay: View {
         Task {
             let availability = LanguageAvailability()
             
+            print("TranscriptionDisplay: Checking translation availability")
+            
             // Check for English (UK) first, then fall back to generic English
             let englishUK = await availability.status(
                 from: Locale.Language(identifier: "ja"),
@@ -311,9 +313,11 @@ struct TranscriptionDisplay: View {
                 if englishUK == .installed || englishUS == .installed || englishGeneric == .installed {
                     translationAvailable = true
                     print("Translation: Languages are installed (UK: \(englishUK), US: \(englishUS), Generic: \(englishGeneric))")
+                    print("TranscriptionDisplay: translationAvailable set to true")
                 } else {
                     translationAvailable = false
                     print("Translation: Languages not installed (UK: \(englishUK), US: \(englishUS), Generic: \(englishGeneric))")
+                    print("TranscriptionDisplay: translationAvailable set to false")
                 }
             }
         }
