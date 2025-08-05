@@ -58,7 +58,8 @@ struct ContentView: View {
                 transcribedText: transcriptionService.transcribedText,
                 furiganaTokens: transcriptionService.furiganaTokens,
                 processingTime: transcriptionService.transcriptionTime,
-                isLiveMode: transcriptionMode == .live
+                isLiveMode: transcriptionMode == .live,
+                isRecording: isRecording
             )
             
             Spacer()
@@ -205,6 +206,7 @@ struct TranscriptionDisplay: View {
     let furiganaTokens: [FuriganaToken]
     let processingTime: String
     let isLiveMode: Bool
+    let isRecording: Bool
     
     private let placeholderText = "話してください"
     
@@ -260,12 +262,12 @@ struct TranscriptionDisplay: View {
                     .padding(.horizontal)
             }
             
-            // English translation
-            if translationAvailable && !transcribedText.isEmpty && !transcribedText.starts(with: "Error:") {
+            // English translation - only show when not recording
+            if !isRecording && translationAvailable && !transcribedText.isEmpty && !transcribedText.starts(with: "Error:") {
                 let _ = print("TranscriptionDisplay: Showing TranslationView for '\(transcribedText)'")
                 TranslationView(textToTranslate: transcribedText)
                     .id(transcribedText) // Force recreation when text changes
-            } else if !transcribedText.isEmpty && !translationAvailable {
+            } else if !isRecording && !transcribedText.isEmpty && !translationAvailable {
                 VStack(spacing: 8) {
                     Divider()
                         .padding(.horizontal, 40)
