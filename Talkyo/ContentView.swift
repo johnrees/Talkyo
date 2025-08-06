@@ -141,37 +141,65 @@ struct TranslationView: View {
     @State private var translatedText = ""
     @State private var configuration: TranslationSession.Configuration?
     
+    private var deviceLanguage: String {
+        // Get the device's preferred language with region if available
+        let language = Locale.current.language
+        
+        // Try to get full identifier (e.g., "en-GB")
+        if let region = language.region?.identifier {
+            return "\(language.languageCode?.identifier ?? "en")-\(region)"
+        }
+        
+        // Fall back to just language code
+        return language.languageCode?.identifier ?? "en"
+    }
+    
+    private var shouldTranslate: Bool {
+        // Don't translate if device language is Japanese
+        return !deviceLanguage.starts(with: "ja")
+    }
+    
     init(textToTranslate: String) {
         self.textToTranslate = textToTranslate
         print("TranslationView: Initialized with text '\(textToTranslate)'")
     }
     
     var body: some View {
-        VStack(spacing: 8) {
-            Divider()
-                .padding(.horizontal, 40)
-            
-            if !translatedText.isEmpty {
-                Text(translatedText)
-                    .font(.system(size: 20))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            } else {
-                Text("Translating...")
-                    .font(.system(size: 20))
-                    .foregroundColor(.secondary.opacity(0.5))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+        Group {
+            if shouldTranslate {
+                VStack(spacing: 8) {
+                    Divider()
+                        .padding(.horizontal, 40)
+                    
+                    if !translatedText.isEmpty {
+                        Text(translatedText)
+                            .font(.system(size: 20))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    } else {
+                        Text("Translating...")
+                            .font(.system(size: 20))
+                            .foregroundColor(.secondary.opacity(0.5))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                }
             }
         }
         .onAppear {
             print("TranslationView: onAppear called for '\(textToTranslate)'")
-            if !textToTranslate.isEmpty && !textToTranslate.starts(with: "Error:") {
+            print("TranslationView: Device language is '\(deviceLanguage)', shouldTranslate: \(shouldTranslate)")
+            
+            if shouldTranslate && !textToTranslate.isEmpty && !textToTranslate.starts(with: "Error:") {
                 print("Translation: Creating configuration for '\(textToTranslate)'")
+                
+                // Use device's current language as target
+                let targetLanguage = Locale.Language(identifier: deviceLanguage)
+                
                 configuration = TranslationSession.Configuration(
                     source: Locale.Language(identifier: "ja"),
-                    target: Locale.Language(identifier: "en-GB")
+                    target: targetLanguage
                 )
             }
         }
@@ -291,34 +319,54 @@ struct TranscriptionDisplay: View {
     
     private func checkTranslationAvailability() {
         Task {
+            // Get device language with region
+            let language = Locale.current.language
+            let deviceLanguageCode = language.languageCode?.identifier ?? "en"
+            
+            // Build full language identifier with region if available
+            let fullLanguageIdentifier: String
+            if let region = language.region?.identifier {
+                fullLanguageIdentifier = "\(deviceLanguageCode)-\(region)"
+            } else {
+                fullLanguageIdentifier = deviceLanguageCode
+            }
+            
+            // Skip translation availability check if device is in Japanese
+            if deviceLanguageCode == "ja" {
+                print("TranscriptionDisplay: Device is in Japanese, skipping translation")
+                await MainActor.run {
+                    translationAvailable = false
+                }
+                return
+            }
+            
             let availability = LanguageAvailability()
             
-            print("TranscriptionDisplay: Checking translation availability")
+            print("TranscriptionDisplay: Checking translation availability for device language: \(fullLanguageIdentifier)")
             
-            // Check for English (UK) first, then fall back to generic English
-            let englishUK = await availability.status(
+            // Check availability for device's language with region
+            var status = await availability.status(
                 from: Locale.Language(identifier: "ja"),
-                to: Locale.Language(identifier: "en-GB")
+                to: Locale.Language(identifier: fullLanguageIdentifier)
             )
             
-            let englishUS = await availability.status(
-                from: Locale.Language(identifier: "ja"),
-                to: Locale.Language(identifier: "en-US")
-            )
-            
-            let englishGeneric = await availability.status(
-                from: Locale.Language(identifier: "ja"),
-                to: Locale.Language(identifier: "en")
-            )
+            // If not installed, try without region
+            if status != .installed && fullLanguageIdentifier.contains("-") {
+                print("TranscriptionDisplay: Trying without region: \(deviceLanguageCode)")
+                status = await availability.status(
+                    from: Locale.Language(identifier: "ja"),
+                    to: Locale.Language(identifier: deviceLanguageCode)
+                )
+            }
             
             await MainActor.run {
-                if englishUK == .installed || englishUS == .installed || englishGeneric == .installed {
+                if status == .installed {
                     translationAvailable = true
-                    print("Translation: Languages are installed (UK: \(englishUK), US: \(englishUS), Generic: \(englishGeneric))")
+                    print("Translation: Language '\(deviceLanguageCode)' is installed: \(status)")
                     print("TranscriptionDisplay: translationAvailable set to true")
                 } else {
                     translationAvailable = false
-                    print("Translation: Languages not installed (UK: \(englishUK), US: \(englishUS), Generic: \(englishGeneric))")
+                    print("Translation: Language '\(deviceLanguageCode)' is not installed: \(status)")
                     print("TranscriptionDisplay: translationAvailable set to false")
                 }
             }
