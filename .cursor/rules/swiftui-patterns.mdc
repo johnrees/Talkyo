@@ -259,4 +259,4 @@ Button("Save") {
 - Use `.transition()` for view appearance/disappearance
 - Consider accessibility preferences for reduced motion
 
-All SwiftUI views should be placed in [MyProjectPackage/Sources](mdc:MyProjectPackage/Sources) following this modular architecture pattern.
+All SwiftUI views should be placed in the Talkyo/ directory following this modular architecture pattern.

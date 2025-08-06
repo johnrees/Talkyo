@@ -198,14 +198,14 @@ When building and testing, use XcodeBuildMCP tools instead of raw CLI commands:
 ```javascript
 // Build for simulator
 build_sim_name_proj({
-    projectPath: "/path/to/Talkyo.xcodeproj",
+    projectPath: "/Users/john/Code/old-stuff/xcode/Talkyo/Talkyo.xcodeproj",
     scheme: "Talkyo",
     simulatorName: "iPhone 16"
 })
 
-// Run tests
+// Run tests  
 test_sim_name_proj({
-    projectPath: "/path/to/Talkyo.xcodeproj",
+    projectPath: "/Users/john/Code/old-stuff/xcode/Talkyo/Talkyo.xcodeproj",
     scheme: "Talkyo",
     simulatorName: "iPhone 16"
 })

@@ -10,14 +10,14 @@ To work with this project, build, test, and development commands should use Xcod
 ## Project Discovery & Setup
 
 ```javascript
-// Discover Xcode projects in the workspace
+// Discover Xcode projects in the directory
 discover_projs({
     workspaceRoot: "/path/to/Talkyo"
 })
 
-// List available schemes
-list_schems_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace"
+// List available schemes for project
+list_schems_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj"
 })
 ```
 
@@ -25,16 +25,16 @@ list_schems_ws({
 
 ```javascript
 // Build for iPhone simulator by name
-build_sim_name_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace",
+build_sim_name_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
     scheme: "Talkyo",
     simulatorName: "iPhone 16",
     configuration: "Debug"
 })
 
 // Build and run in one step
-build_run_sim_name_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace",
+build_run_sim_name_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
     scheme: "Talkyo", 
     simulatorName: "iPhone 16"
 })
@@ -47,8 +47,8 @@ build_run_sim_name_ws({
 list_devices()
 
 // Build for physical device
-build_dev_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace",
+build_dev_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
     scheme: "Talkyo",
     configuration: "Debug"
 })
@@ -58,22 +58,17 @@ build_dev_ws({
 
 ```javascript
 // Run tests on simulator
-test_sim_name_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace",
+test_sim_name_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
     scheme: "Talkyo",
     simulatorName: "iPhone 16"
 })
 
 // Run tests on device
-test_device_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace",
+test_device_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
     scheme: "Talkyo",
     deviceId: "DEVICE_UUID_HERE"
-})
-
-// Test Swift Package
-swift_package_test({
-    packagePath: "/path/to/TalkyoPackage"
 })
 ```
 
@@ -176,13 +171,13 @@ get_app_bundle_id({
 })
 
 // Clean build artifacts
-clean_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace"
+clean_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj"
 })
 
 // Get app path for simulator
-get_sim_app_path_name_ws({
-    workspacePath: "/path/to/Talkyo.xcworkspace",
+get_sim_app_path_name_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
     scheme: "Talkyo",
     platform: "iOS Simulator",
     simulatorName: "iPhone 16"

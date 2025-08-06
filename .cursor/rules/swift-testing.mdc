@@ -13,7 +13,7 @@ applies_to: ["**/Tests/**/*.swift", "**/*Tests.swift", "**/*Test.swift"]
 
 ## Modern Testing with @Test Macros
 
-Use the **Swift Testing** framework (not XCTest) for all tests. Tests should be placed in [MyProjectPackage/Tests](mdc:MyProjectPackage/Tests).
+Use the **Swift Testing** framework (not XCTest) for all tests. Tests should be added to the Talkyo project test targets.
 
 ### Basic Test Structure
 
@@ -216,17 +216,12 @@ When writing UI tests in [MyProjectUITests](mdc:MyProjectUITests):
 Tests can be run using XcodeBuildMCP tools:
 
 ```javascript
-// Run package tests
-swift_package_test({
-    packagePath: "/path/to/MyProjectPackage"
-})
-
 // Run tests on simulator
-test_sim_name_ws({
-    workspacePath: "/path/to/MyProject.xcworkspace",
-    scheme: "MyProject",
+test_sim_name_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
+    scheme: "Talkyo",
     simulatorName: "iPhone 16"
 })
 ```
 
-All tests should follow these modern Swift Testing patterns and be placed in the appropriate test targets within [MyProjectPackage/Tests](mdc:MyProjectPackage/Tests).
+All tests should follow these modern Swift Testing patterns and be placed in the appropriate test targets within the Talkyo project.

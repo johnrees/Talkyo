@@ -13,7 +13,7 @@ applies_to: ["**/*.swift"]
 
 ## Actor Isolation (Swift 6 Strict Mode)
 
-All code must follow Swift 6 strict concurrency rules. The project uses strict concurrency mode as configured in [MyProjectPackage/Package.swift](mdc:MyProjectPackage/Package.swift).
+All code must follow Swift 6 strict concurrency rules. The project uses strict concurrency mode.
 
 ### @MainActor for UI Code
 All UI-related code must be isolated to the main actor:
@@ -268,4 +268,4 @@ func loadUserData() async throws {
 }
 ```
 
-All concurrent code should be implemented in [MyProjectPackage/Sources](mdc:MyProjectPackage/Sources) following these strict concurrency guidelines.
+All concurrent code should be implemented in the Talkyo project following these strict concurrency guidelines.

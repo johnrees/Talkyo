@@ -18,31 +18,32 @@ This is a native **iOS application** built with **Swift 6.1+** and **SwiftUI**. 
 
 ## Project Structure
 
-The project follows a **workspace + SPM package** architecture:
+Talkyo uses a **direct Xcode project** structure:
 
 ```
 Talkyo/
-├── Config/                         # XCConfig build settings
-│   ├── Debug.xcconfig
-│   ├── Release.xcconfig
-│   ├── Shared.xcconfig
-│   └── Tests.xcconfig
-├── Talkyo.xcworkspace/            # Workspace container
-├── Talkyo.xcodeproj/              # App shell (minimal wrapper)
-├── Talkyo/                        # App target - just the entry point
-│   ├── Assets.xcassets/
-│   ├── TalkyoApp.swift           # @main entry point only
-│   └── Talkyo.xctestplan
-├── TalkyoPackage/                 # All features and business logic
-│   ├── Package.swift
-│   ├── Sources/
-│   │   └── TalkyoFeature/        # Feature modules
-│   └── Tests/
-│       └── TalkyoFeatureTests/   # Swift Testing tests
-└── TalkyoUITests/                 # UI automation tests
+├── .cursor/                        # Cursor IDE rules
+│   └── rules/                      # Swift development guidelines
+├── .github/                        # GitHub configuration
+│   └── copilot-instructions.md    # Copilot guidelines
+├── Talkyo.xcodeproj/              # Xcode project file
+├── Talkyo/                        # Main app source files
+│   ├── Assets.xcassets/          # Images and resources
+│   ├── TalkyoApp.swift           # @main entry point
+│   ├── ContentView.swift         # Main UI
+│   ├── SettingsView.swift        # Settings screen
+│   ├── TranscriptionService.swift # Transcription coordinator
+│   ├── SpeechRecognizer.swift    # Speech recognition wrapper
+│   ├── AudioRecorder.swift       # Audio recording/playback
+│   ├── FuriganaGenerator.swift   # Japanese text processing
+│   ├── FuriganaTextView.swift    # Furigana display view
+│   └── FuriganaToken.swift       # Furigana data model
+├── Package.swift                  # SPM dependencies (if needed)
+├── CLAUDE.md                      # Claude AI instructions
+└── TODO.md                        # Development roadmap
 ```
 
-**Important:** All development work should be done in the **TalkyoPackage** Swift Package, not in the app project. The app project is merely a thin wrapper that imports and launches the package features.
+**Note:** Unlike the template architecture, Talkyo keeps all source files directly in the `Talkyo/` directory rather than using a separate Swift Package. This simpler structure is appropriate for focused, single-purpose apps.
 
 # Code Quality & Style Guidelines
 
@@ -233,8 +234,8 @@ struct ItemListView: View {
 
 # Development Workflow
 
-1. **Make changes in the Package**: All feature development happens in TalkyoPackage/Sources/
-2. **Write tests**: Add Swift Testing tests in TalkyoPackage/Tests/
+1. **Make changes in the app**: All feature development happens in Talkyo/ directory
+2. **Write tests**: Add Swift Testing tests to the project
 3. **Build and test**: Use XcodeBuildMCP tools to build and run tests
 4. **Run on simulator**: Deploy to simulator for manual testing
 5. **UI automation**: Use describe_ui and automation tools for UI testing
