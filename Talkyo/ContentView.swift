@@ -1,14 +1,5 @@
-//
-//  ContentView.swift
-//  Talkyo
-//
-//  Created by John Rees on 8/2/25.
-//
-
 import SwiftUI
 import Translation
-
-// MARK: - Speech Recognition Configuration
 
 enum SpeechRecognitionMode: String, CaseIterable {
     case onDevice = "On-Device"
@@ -24,8 +15,6 @@ enum SpeechRecognitionMode: String, CaseIterable {
     }
 }
 
-// MARK: - Transcription Mode
-
 enum TranscriptionMode: String, CaseIterable {
     case standard = "Standard"
     case live = "Live"
@@ -38,17 +27,16 @@ enum TranscriptionMode: String, CaseIterable {
     }
 }
 
-// MARK: - Main View
-
+@MainActor
 struct ContentView: View {
-    @StateObject private var transcriptionService = TranscriptionService()
+    @State private var transcriptionService = TranscriptionService()
     @State private var isRecording = false
     @State private var selectedMode = SpeechRecognitionMode.onDevice
     @State private var transcriptionMode = TranscriptionMode.standard
     @State private var showingSettings = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 TranscriptionDisplay(
                     transcribedText: transcriptionService.transcribedText,
@@ -68,9 +56,9 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
+                    Button {
                         showingSettings = true
-                    }) {
+                    } label: {
                         Image(systemName: "gearshape.fill")
                             .font(.title2)
                     }
@@ -86,8 +74,6 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - View Components
-    
     private var controlButtons: some View {
         VStack(spacing: 16) {
             if transcriptionService.hasRecording {
@@ -98,22 +84,13 @@ struct ContentView: View {
             
             RecordButton(
                 isRecording: $isRecording,
-                startAction: {
-                    transcriptionService.startRecording()
-                },
-                stopAction: {
-                    transcriptionService.stopRecording()
-                },
-                cancelAction: {
-                    transcriptionService.cancelRecording()
-                }
+                startAction: transcriptionService.startRecording,
+                stopAction: transcriptionService.stopRecording,
+                cancelAction: transcriptionService.cancelRecording
             )
         }
     }
-    
 }
-
-// MARK: - Translation View
 
 struct TranslationView: View {
     let textToTranslate: String
@@ -121,27 +98,17 @@ struct TranslationView: View {
     @State private var configuration: TranslationSession.Configuration?
     
     private var deviceLanguage: String {
-        // Get the device's preferred language with region if available
         let language = Locale.current.language
-        
-        // Try to get full identifier (e.g., "en-GB")
         if let region = language.region?.identifier {
             return "\(language.languageCode?.identifier ?? "en")-\(region)"
         }
-        
-        // Fall back to just language code
         return language.languageCode?.identifier ?? "en"
     }
     
     private var shouldTranslate: Bool {
-        // Don't translate if device language is Japanese
-        return !deviceLanguage.starts(with: "ja")
+        !deviceLanguage.starts(with: "ja")
     }
     
-    init(textToTranslate: String) {
-        self.textToTranslate = textToTranslate
-        print("TranslationView: Initialized with text '\(textToTranslate)'")
-    }
     
     var body: some View {
         Group {
@@ -166,39 +133,24 @@ struct TranslationView: View {
                 }
             }
         }
-        .onAppear {
-            print("TranslationView: onAppear called for '\(textToTranslate)'")
-            print("TranslationView: Device language is '\(deviceLanguage)', shouldTranslate: \(shouldTranslate)")
+        .task {
+            guard shouldTranslate,
+                  !textToTranslate.isEmpty,
+                  !textToTranslate.starts(with: "Error:") else { return }
             
-            if shouldTranslate && !textToTranslate.isEmpty && !textToTranslate.starts(with: "Error:") {
-                print("Translation: Creating configuration for '\(textToTranslate)'")
-                
-                // Use device's current language as target
-                let targetLanguage = Locale.Language(identifier: deviceLanguage)
-                
-                configuration = TranslationSession.Configuration(
-                    source: Locale.Language(identifier: "ja"),
-                    target: targetLanguage
-                )
-            }
+            let targetLanguage = Locale.Language(identifier: deviceLanguage)
+            configuration = TranslationSession.Configuration(
+                source: Locale.Language(identifier: "ja"),
+                target: targetLanguage
+            )
         }
         .translationTask(configuration) { session in
-            print("Translation: Task triggered for '\(textToTranslate)'")
-            
             guard !textToTranslate.isEmpty,
-                  !textToTranslate.starts(with: "Error:") else {
-                print("Translation: Skipping - invalid text")
-                return
-            }
+                  !textToTranslate.starts(with: "Error:") else { return }
             
             do {
-                print("Translation: Starting translation")
                 let response = try await session.translate(textToTranslate)
-                print("Translation: Success - '\(response.targetText)'")
-                
-                await MainActor.run {
-                    self.translatedText = response.targetText
-                }
+                translatedText = response.targetText
             } catch {
                 print("Translation error: \(error)")
             }
@@ -206,18 +158,15 @@ struct TranslationView: View {
     }
 }
 
-// MARK: - Transcription Display
-
 struct TranscriptionDisplay: View {
     let transcribedText: String
     let furiganaTokens: [FuriganaToken]
     let processingTime: String
     let isLiveMode: Bool
     let isRecording: Bool
+    @State private var translationAvailable = false
     
     private let placeholderText = "話してください"
-    
-    @State private var translationAvailable = false
     
     var body: some View {
         ScrollView {
@@ -238,8 +187,8 @@ struct TranscriptionDisplay: View {
         .background(Color(.systemGray6))
         .cornerRadius(12)
         .padding(.horizontal)
-        .onAppear {
-            checkTranslationAvailability()
+        .task {
+            await checkTranslationAvailability()
         }
     }
     
@@ -269,11 +218,9 @@ struct TranscriptionDisplay: View {
                     .padding(.horizontal)
             }
             
-            // English translation - only show when not recording
             if !isRecording && translationAvailable && !transcribedText.isEmpty && !transcribedText.starts(with: "Error:") {
-                let _ = print("TranscriptionDisplay: Showing TranslationView for '\(transcribedText)'")
                 TranslationView(textToTranslate: transcribedText)
-                    .id(transcribedText) // Force recreation when text changes
+                    .id(transcribedText)
             } else if !isRecording && !transcribedText.isEmpty && !translationAvailable {
                 VStack(spacing: 8) {
                     Divider()
@@ -296,65 +243,39 @@ struct TranscriptionDisplay: View {
             .padding(.top, 4)
     }
     
-    private func checkTranslationAvailability() {
-        Task {
-            // Get device language with region
-            let language = Locale.current.language
-            let deviceLanguageCode = language.languageCode?.identifier ?? "en"
-            
-            // Build full language identifier with region if available
-            let fullLanguageIdentifier: String
-            if let region = language.region?.identifier {
-                fullLanguageIdentifier = "\(deviceLanguageCode)-\(region)"
-            } else {
-                fullLanguageIdentifier = deviceLanguageCode
-            }
-            
-            // Skip translation availability check if device is in Japanese
-            if deviceLanguageCode == "ja" {
-                print("TranscriptionDisplay: Device is in Japanese, skipping translation")
-                await MainActor.run {
-                    translationAvailable = false
-                }
-                return
-            }
-            
-            let availability = LanguageAvailability()
-            
-            print("TranscriptionDisplay: Checking translation availability for device language: \(fullLanguageIdentifier)")
-            
-            // Check availability for device's language with region
-            var status = await availability.status(
-                from: Locale.Language(identifier: "ja"),
-                to: Locale.Language(identifier: fullLanguageIdentifier)
-            )
-            
-            // If not installed, try without region
-            if status != .installed && fullLanguageIdentifier.contains("-") {
-                print("TranscriptionDisplay: Trying without region: \(deviceLanguageCode)")
-                status = await availability.status(
-                    from: Locale.Language(identifier: "ja"),
-                    to: Locale.Language(identifier: deviceLanguageCode)
-                )
-            }
-            
-            await MainActor.run {
-                if status == .installed {
-                    translationAvailable = true
-                    print("Translation: Language '\(deviceLanguageCode)' is installed: \(status)")
-                    print("TranscriptionDisplay: translationAvailable set to true")
-                } else {
-                    translationAvailable = false
-                    print("Translation: Language '\(deviceLanguageCode)' is not installed: \(status)")
-                    print("TranscriptionDisplay: translationAvailable set to false")
-                }
-            }
+    private func checkTranslationAvailability() async {
+        let language = Locale.current.language
+        let deviceLanguageCode = language.languageCode?.identifier ?? "en"
+        
+        let fullLanguageIdentifier: String
+        if let region = language.region?.identifier {
+            fullLanguageIdentifier = "\(deviceLanguageCode)-\(region)"
+        } else {
+            fullLanguageIdentifier = deviceLanguageCode
         }
+        
+        guard deviceLanguageCode != "ja" else {
+            translationAvailable = false
+            return
+        }
+        
+        let availability = LanguageAvailability()
+        
+        var status = await availability.status(
+            from: Locale.Language(identifier: "ja"),
+            to: Locale.Language(identifier: fullLanguageIdentifier)
+        )
+        
+        if status != .installed && fullLanguageIdentifier.contains("-") {
+            status = await availability.status(
+                from: Locale.Language(identifier: "ja"),
+                to: Locale.Language(identifier: deviceLanguageCode)
+            )
+        }
+        
+        translationAvailable = status == .installed
     }
-    
 }
-
-// MARK: - Record Button
 
 struct RecordButton: View {
     @Binding var isRecording: Bool
@@ -362,18 +283,17 @@ struct RecordButton: View {
     let stopAction: () -> Void
     let cancelAction: () -> Void
     
-    private let buttonSize: CGFloat = 120
-    private let iconSize: CGFloat = 50
-    private let cancelThreshold: CGFloat = 100
     @State private var stopTimer: Timer?
     @State private var isDraggingToCancel = false
     @State private var dragOffset: CGSize = .zero
     
+    private let buttonSize: CGFloat = 120
+    private let iconSize: CGFloat = 50
+    private let cancelThreshold: CGFloat = 100
+    
     var body: some View {
-        Button(action: {}) {
-            recordButtonContent
-        }
-        .simultaneousGesture(pushToTalkGesture)
+        recordButtonContent
+            .simultaneousGesture(pushToTalkGesture)
     }
     
     private var recordButtonContent: some View {
@@ -389,19 +309,11 @@ struct RecordButton: View {
     }
     
     private var buttonIcon: String {
-        if isDraggingToCancel {
-            return "xmark.circle.fill"
-        } else {
-            return isRecording ? "mic.fill" : "mic"
-        }
+        isDraggingToCancel ? "xmark.circle.fill" : (isRecording ? "mic.fill" : "mic")
     }
     
     private var recordingBackground: Color {
-        if isDraggingToCancel {
-            return .orange
-        } else {
-            return isRecording ? .red : .blue
-        }
+        isDraggingToCancel ? .orange : (isRecording ? .red : .blue)
     }
     
     private var pushToTalkGesture: some Gesture {
@@ -415,7 +327,6 @@ struct RecordButton: View {
                     isDraggingToCancel = false
                     startAction()
                 } else {
-                    // Check if dragged far enough to trigger cancel
                     let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
                     isDraggingToCancel = distance > cancelThreshold
                     dragOffset = value.translation
@@ -426,16 +337,13 @@ struct RecordButton: View {
                     let distance = sqrt(pow(value.translation.width, 2) + pow(value.translation.height, 2))
                     let shouldCancel = distance > cancelThreshold
                     
+                    isDraggingToCancel = false
+                    dragOffset = .zero
+                    
                     if shouldCancel {
-                        // Cancel the recording
                         isRecording = false
-                        isDraggingToCancel = false
-                        dragOffset = .zero
                         cancelAction()
                     } else {
-                        // Normal stop with delay
-                        isDraggingToCancel = false
-                        dragOffset = .zero
                         stopTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
                             isRecording = false
                             stopAction()
@@ -445,8 +353,6 @@ struct RecordButton: View {
             }
     }
 }
-
-// MARK: - Playback Button
 
 struct PlaybackButton: View {
     let action: () -> Void

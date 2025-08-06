@@ -1,15 +1,7 @@
-//
-//  SpeechRecognizer.swift
-//  Talkyo
-//
-//  Handles speech recognition using Apple's Speech framework
-//
-
 import Foundation
 import Speech
 import AVFoundation
-
-// MARK: - Speech Recognition Error
+import Observation
 
 enum SpeechRecognitionError: LocalizedError {
     case recognizerUnavailable
@@ -28,33 +20,20 @@ enum SpeechRecognitionError: LocalizedError {
     }
 }
 
-// MARK: - Speech Recognizer
-
 @MainActor
-final class SpeechRecognizer: NSObject, ObservableObject {
-    // MARK: - Published Properties
-    
-    @Published private(set) var isAvailable = false
-    @Published private(set) var authorizationStatus: SFSpeechRecognizerAuthorizationStatus = .notDetermined
-    
-    // MARK: - Private Properties
-    
+@Observable
+final class SpeechRecognizer: NSObject {
+    private(set) var isAvailable = false
+    private(set) var authorizationStatus: SFSpeechRecognizerAuthorizationStatus = .notDetermined
     private var recognizer: SFSpeechRecognizer?
     private var currentConfiguration = SpeechRecognitionMode.onDevice
     private var recognitionTask: SFSpeechRecognitionTask?
     private var audioBufferRequest: SFSpeechAudioBufferRecognitionRequest?
     
-    // MARK: - Callbacks
-    
     var onPartialTranscription: ((String) -> Void)?
     var onFinalTranscription: ((SpeechRecognitionResult) -> Void)?
     
-    // MARK: - Constants
-    
     private let locale = Locale(identifier: "ja-JP")
-    
-    // MARK: - Initialization
-    
     override init() {
         super.init()
         setupRecognizer()
@@ -62,13 +41,9 @@ final class SpeechRecognizer: NSObject, ObservableObject {
             await requestAuthorization()
         }
     }
-    
-    // MARK: - Public Methods
-    
     func setConfiguration(_ mode: SpeechRecognitionMode) {
         currentConfiguration = mode
     }
-    
     func transcribe(audioURL: URL) async throws -> SpeechRecognitionResult {
         guard let recognizer = recognizer else {
             throw SpeechRecognitionError.recognizerUnavailable
@@ -90,7 +65,6 @@ final class SpeechRecognizer: NSObject, ObservableObject {
             throw SpeechRecognitionError.recognitionFailed(error.localizedDescription)
         }
     }
-    
     func startLiveTranscription() throws {
         guard let recognizer = recognizer else {
             throw SpeechRecognitionError.recognizerUnavailable
@@ -100,25 +74,17 @@ final class SpeechRecognizer: NSObject, ObservableObject {
             throw SpeechRecognitionError.recognizerUnavailable
         }
         
-        // Cancel any existing task
         stopLiveTranscription()
         
-        // Create and configure the request
         audioBufferRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let request = audioBufferRequest else { return }
         
         request.shouldReportPartialResults = true
+        request.addsPunctuation = true
+        request.taskHint = .dictation
         
-        // Enable punctuation for iOS 16+
-        if #available(iOS 16.0, *) {
-            request.addsPunctuation = true
-            request.taskHint = .dictation
-        }
-        
-        // Configure recognition mode
         configureRecognitionMode(for: request)
         
-        // Start the recognition task
         recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor in
                 if let error = error {
@@ -142,25 +108,19 @@ final class SpeechRecognizer: NSObject, ObservableObject {
             }
         }
     }
-    
     func stopLiveTranscription() {
         recognitionTask?.cancel()
         recognitionTask = nil
         audioBufferRequest?.endAudio()
         audioBufferRequest = nil
     }
-    
     func appendAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         audioBufferRequest?.append(buffer)
     }
-    
-    // MARK: - Private Methods
-    
     private func setupRecognizer() {
         recognizer = SFSpeechRecognizer(locale: locale)
         recognizer?.delegate = self
     }
-    
     private func requestAuthorization() async {
         await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { [weak self] status in
@@ -172,31 +132,17 @@ final class SpeechRecognizer: NSObject, ObservableObject {
             }
         }
     }
-    
     private func createRecognitionRequest(for url: URL) -> SFSpeechURLRecognitionRequest {
         let request = SFSpeechURLRecognitionRequest(url: url)
         
-        // Configure request settings
         request.shouldReportPartialResults = false
+        request.addsPunctuation = true
+        request.taskHint = .dictation
         
-        // Enable punctuation for iOS 16+
-        if #available(iOS 16.0, *) {
-            request.addsPunctuation = true
-            request.taskHint = .dictation
-        }
-        
-        // Additional settings for iOS 18+
-        if #available(iOS 18.0, *) {
-            // Ensure punctuation is enabled for iOS 18
-            request.addsPunctuation = true
-        }
-        
-        // Apply configuration mode
         configureRecognitionMode(for: request)
         
         return request
     }
-    
     private func configureRecognitionMode(for request: SFSpeechRecognitionRequest) {
         switch currentConfiguration {
         case .onDevice:
@@ -204,11 +150,9 @@ final class SpeechRecognizer: NSObject, ObservableObject {
         case .server:
             request.requiresOnDeviceRecognition = false
         case .hybrid:
-            // Let the system decide
             break
         }
     }
-    
     private func performRecognition(
         with request: SFSpeechURLRecognitionRequest,
         using recognizer: SFSpeechRecognizer
@@ -224,20 +168,13 @@ final class SpeechRecognizer: NSObject, ObservableObject {
                     continuation.resume(returning: result)
                 }
             }
-            
-            // Store task reference if needed for cancellation
             _ = task
         }
     }
 }
 
-// MARK: - SFSpeechRecognizerDelegate
-
 extension SpeechRecognizer: SFSpeechRecognizerDelegate {
-    nonisolated func speechRecognizer(
-        _ speechRecognizer: SFSpeechRecognizer,
-        availabilityDidChange available: Bool
-    ) {
+    nonisolated func speechRecognizer(_ speechRecognizer: SFSpeechRecognizer, availabilityDidChange available: Bool) {
         Task { @MainActor in
             self.isAvailable = available
         }

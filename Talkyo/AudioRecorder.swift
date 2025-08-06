@@ -1,35 +1,18 @@
-//
-//  AudioRecorder.swift
-//  Talkyo
-//
-//  Handles audio recording and playback
-//
-
 import AVFoundation
 import AudioToolbox
+import Observation
 
-// MARK: - Audio Recorder
-
-final class AudioRecorder: NSObject, ObservableObject {
-    // MARK: - Published Properties
-    
-    @Published private(set) var isRecording = false
-    @Published private(set) var hasRecording = false
-    @Published private(set) var recordedFileURL: URL?
-    
-    // MARK: - Private Properties
-    
+@Observable
+final class AudioRecorder: NSObject {
+    private(set) var isRecording = false
+    private(set) var hasRecording = false
+    private(set) var recordedFileURL: URL?
     private var audioEngine: AVAudioEngine?
     private var audioConverter: AVAudioConverter?
     private var audioPlayer: AVAudioPlayer?
     private var audioBuffer: [Float] = []
     
-    // MARK: - Callbacks
-    
     var onAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
-    
-    // MARK: - Audio Configuration
-    
     private enum Config {
         enum Audio {
             static let sampleRate: Double = 16000
@@ -37,33 +20,25 @@ final class AudioRecorder: NSObject, ObservableObject {
         }
         
         enum Haptic {
-            static let start: SystemSoundID = 1519    // Light impact
-            static let stop: SystemSoundID = 1520     // Medium impact  
-            static let cancel: SystemSoundID = 1521   // Heavy impact
+            static let start: SystemSoundID = 1519
+            static let stop: SystemSoundID = 1520
+            static let cancel: SystemSoundID = 1521
         }
     }
-    
-    // MARK: - Initialization
-    
     override init() {
         super.init()
         configureAudioSession()
         setupAudioEngine()
     }
-    
-    // MARK: - Public Methods
-    
     func startRecording() {
         guard !isRecording else { return }
         
         prepareForRecording()
         playHaptic(Config.Haptic.start)
         
-        // Use the fresh engine created in prepareForRecording
         guard let engine = audioEngine else { return }
         beginRecording(with: engine)
     }
-    
     func stopRecording() -> [Float] {
         guard isRecording else { return [] }
         
@@ -77,7 +52,6 @@ final class AudioRecorder: NSObject, ObservableObject {
         
         return audioBuffer
     }
-    
     func playRecording() {
         guard let url = recordedFileURL,
               FileManager.default.fileExists(atPath: url.path) else { return }
@@ -90,21 +64,16 @@ final class AudioRecorder: NSObject, ObservableObject {
             print("Playback failed: \(error)")
         }
     }
-    
     func cancelRecording() {
         guard isRecording else { return }
         
         completeRecording()
         playHaptic(Config.Haptic.cancel)
         
-        // Clear the buffer without saving
         audioBuffer.removeAll()
         recordedFileURL = nil
         hasRecording = false
     }
-    
-    // MARK: - Private Methods - Setup
-    
     private func configureAudioSession() {
         let session = AVAudioSession.sharedInstance()
         
@@ -119,39 +88,28 @@ final class AudioRecorder: NSObject, ObservableObject {
             }
         }
     }
-    
     private func setupAudioEngine() {
         audioEngine = AVAudioEngine()
     }
-    
-    // MARK: - Private Methods - Recording
-    
     private func prepareForRecording() {
-        // Stop any active playback
         audioPlayer?.stop()
         audioPlayer = nil
         
-        // Clear previous data
         audioBuffer.removeAll()
         
-        // Reset engine if needed
         if let engine = audioEngine, engine.isRunning {
             engine.inputNode.removeTap(onBus: 0)
             engine.stop()
             engine.reset()
         }
         
-        // Create a fresh audio engine for each recording
         audioEngine = AVAudioEngine()
     }
-    
     private func beginRecording(with engine: AVAudioEngine) {
-        // Ensure audio session is active
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true)
-            print("Audio session activated successfully")
         } catch {
             print("Failed to activate audio session: \(error)")
             return
@@ -160,40 +118,27 @@ final class AudioRecorder: NSObject, ObservableObject {
         let inputNode = engine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
         
-        print("Input format: \(inputFormat)")
-        
         guard let recordingFormat = createRecordingFormat(),
               let converter = createAudioConverter(from: inputFormat, to: recordingFormat) else {
-            print("Failed to create recording format or converter")
             return
         }
         
         audioConverter = converter
         
-        // Install tap to capture audio
         inputNode.installTap(onBus: 0, bufferSize: Config.Audio.bufferSize, format: inputFormat) { [weak self] buffer, _ in
-            let frameLength = Int(buffer.frameLength)
-            if frameLength > 0 {
-                print("Captured buffer with \(frameLength) frames")
-            }
             self?.processAudioBuffer(buffer)
-            
-            // Send original buffer for live transcription (before conversion)
             self?.onAudioBuffer?(buffer)
         }
         
-        // Start engine
         do {
             engine.prepare()
             try engine.start()
             isRecording = true
-            print("Audio engine started successfully")
         } catch {
             print("Failed to start recording: \(error)")
             inputNode.removeTap(onBus: 0)
         }
     }
-    
     private func completeRecording() {
         guard let engine = audioEngine else { return }
         
@@ -202,12 +147,7 @@ final class AudioRecorder: NSObject, ObservableObject {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         audioConverter = nil
-        
-        logRecordingStats()
     }
-    
-    // MARK: - Private Methods - Audio Processing
-    
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard let converter = audioConverter,
               let convertedBuffer = createConvertedBuffer(for: buffer) else { return }
@@ -228,9 +168,6 @@ final class AudioRecorder: NSObject, ObservableObject {
         
         audioBuffer.append(contentsOf: samples)
     }
-    
-    // MARK: - Private Methods - File Management
-    
     private func saveRecording() {
         guard let format = createRecordingFormat(),
               let buffer = createAudioBuffer(format: format, samples: audioBuffer) else {
@@ -247,9 +184,6 @@ final class AudioRecorder: NSObject, ObservableObject {
             print("Failed to save recording: \(error)")
         }
     }
-    
-    // MARK: - Private Methods - Helpers
-    
     private func createRecordingFormat() -> AVAudioFormat? {
         AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
@@ -258,11 +192,9 @@ final class AudioRecorder: NSObject, ObservableObject {
             interleaved: false
         )
     }
-    
     private func createAudioConverter(from inputFormat: AVAudioFormat, to outputFormat: AVAudioFormat) -> AVAudioConverter? {
         AVAudioConverter(from: inputFormat, to: outputFormat)
     }
-    
     private func createConvertedBuffer(for sourceBuffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
         guard let format = createRecordingFormat() else { return nil }
         
@@ -272,7 +204,6 @@ final class AudioRecorder: NSObject, ObservableObject {
         
         return AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity)
     }
-    
     private func createAudioBuffer(format: AVAudioFormat, samples: [Float]) -> AVAudioPCMBuffer? {
         guard let buffer = AVAudioPCMBuffer(
             pcmFormat: format,
@@ -287,33 +218,15 @@ final class AudioRecorder: NSObject, ObservableObject {
         
         return buffer
     }
-    
     private func generateRecordingURL() -> URL {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return documentsPath.appendingPathComponent("recording.wav")
     }
-    
     private func playHaptic(_ hapticID: SystemSoundID) {
         AudioServicesPlaySystemSound(hapticID)
     }
-    
-    private func logRecordingStats() {
-        let duration = Double(audioBuffer.count) / Config.Audio.sampleRate
-        let sampleCount = audioBuffer.count
-        
-        print("""
-        Recording completed:
-        - Duration: \(String(format: "%.2f", duration))s
-        - Samples: \(sampleCount)
-        - Sample rate: \(Int(Config.Audio.sampleRate))Hz
-        """)
-    }
 }
 
-// MARK: - AVAudioPlayerDelegate
-
 extension AudioRecorder: AVAudioPlayerDelegate {
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        // Handle playback completion if needed
-    }
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {}
 }

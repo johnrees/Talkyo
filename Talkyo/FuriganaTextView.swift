@@ -1,16 +1,5 @@
-//
-//  FuriganaTextView.swift
-//  Talkyo
-//
-//  SwiftUI implementation for displaying furigana (ruby text) above kanji
-//  Uses a flexible layout that supports multi-line text
-//
-
 import SwiftUI
 
-// MARK: - Furigana Text View
-
-/// A SwiftUI view that displays Japanese text with furigana (small hiragana) above kanji characters
 struct FuriganaTextView: View {
     let tokens: [FuriganaToken]
     let fontSize: CGFloat
@@ -31,9 +20,6 @@ struct FuriganaTextView: View {
     }
 }
 
-// MARK: - Flexible View
-
-/// A view that arranges its children in a flow layout, wrapping to new lines as needed
 struct FlexibleView<Data: Collection, Content: View>: View where Data.Element: Hashable {
     let data: Data
     let spacing: CGFloat
@@ -107,8 +93,6 @@ struct FlexibleViewInternal<Data: Collection, Content: View>: View where Data.El
     }
 }
 
-// MARK: - Size Reader
-
 extension View {
     func readSize(onChange: @escaping (CGSize) -> Void) -> some View {
         background(
@@ -126,9 +110,6 @@ private struct SizePreferenceKey: PreferenceKey {
     static func reduce(value: inout CGSize, nextValue: () -> CGSize) {}
 }
 
-// MARK: - Furigana Character View
-
-/// Individual character/token view that displays furigana above the base text when needed
 struct FuriganaCharacterView: View {
     let token: FuriganaToken
     let fontSize: CGFloat
@@ -144,7 +125,6 @@ struct FuriganaCharacterView: View {
     
     var body: some View {
         if token.needsFurigana, let reading = token.reading {
-            // Display with furigana above
             VStack(spacing: 0) {
                 Text(reading)
                     .font(.custom("KosugiMaru-Regular", size: furiganaSize))
@@ -159,7 +139,6 @@ struct FuriganaCharacterView: View {
                     .fixedSize()
             }
         } else {
-            // Display without furigana (aligned with furigana text)
             Text(token.text)
                 .font(.custom("KosugiMaru-Regular", size: fontSize))
                 .fontWeight(.bold)
@@ -170,11 +149,3 @@ struct FuriganaCharacterView: View {
     }
 }
 
-// MARK: - Token Hashable Extension
-
-extension FuriganaToken: Hashable {
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(text)
-        hasher.combine(reading)
-    }
-}

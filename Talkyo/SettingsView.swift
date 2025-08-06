@@ -1,18 +1,13 @@
-//
-//  SettingsView.swift
-//  Talkyo
-//
-
 import SwiftUI
 
 struct SettingsView: View {
     @Binding var selectedMode: SpeechRecognitionMode
     @Binding var transcriptionMode: TranscriptionMode
-    @ObservedObject var transcriptionService: TranscriptionService
+    let transcriptionService: TranscriptionService
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 30) {
                 VStack(spacing: 16) {
                     transcriptionModeSelector
