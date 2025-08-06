@@ -47,7 +47,7 @@ jobs:
           xcodebuild \
             -project Talkyo.xcodeproj \
             -scheme Talkyo \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.2' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
             -configuration Debug \
             build \
             CODE_SIGNING_ALLOWED=NO \
@@ -111,7 +111,7 @@ jobs:
           ## 📱 iOS Build Statistics
 
           ✅ **Build Status**: Successful
-          🎯 **Target**: iOS Simulator (iPhone 16, iOS 18.2)
+          🎯 **Target**: iOS Simulator (iPhone 16, iOS 18.5)
           📦 **Bundle Size**: ${BUNDLE_SIZE_MB} MB
           ⏱️ **Build Time**: ${BUILD_TIME_FORMATTED}
           📚 **Dependencies**: ${DEP_COUNT} Swift packages
