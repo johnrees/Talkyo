@@ -1,0 +1,33 @@
+{
+  "test_audio_files": [
+    {
+      "filename": "konnichiwa.wav",
+      "text": "こんにちは",
+      "expected_transcription": "こんにちは"
+    },
+    {
+      "filename": "arigatou.wav",
+      "text": "ありがとうございます", 
+      "expected_transcription": "ありがとうございます"
+    },
+    {
+      "filename": "sayounara.wav",
+      "text": "さようなら",
+      "expected_transcription": "さようなら"
+    },
+    {
+      "filename": "weather.wav",
+      "text": "今日は良い天気ですね",
+      "expected_transcription": "今日は良い天気ですね"
+    },
+    {
+      "filename": "library.wav",
+      "text": "図書館で本を読んでいます",
+      "expected_transcription": "図書館で本を読んでいます"
+    }
+  ],
+  "audio_format": "wav",
+  "sample_rate": 16000,
+  "channels": 1,
+  "voice_model": "eleven_multilingual_v2"
+}

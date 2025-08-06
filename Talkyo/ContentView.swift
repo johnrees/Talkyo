@@ -47,6 +47,12 @@ struct ContentView: View {
     @State private var transcriptionMode = TranscriptionMode.standard
     @State private var showingSettings = false
     
+    // Test mode support
+    private var isTestMode: Bool {
+        ProcessInfo.processInfo.arguments.contains("--uitesting")
+    }
+    @State private var showingTestAudioPicker = false
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -96,6 +102,11 @@ struct ContentView: View {
                 }
             }
             
+            // Test mode controls
+            if isTestMode {
+                testAudioControls
+            }
+            
             RecordButton(
                 isRecording: $isRecording,
                 startAction: {
@@ -109,6 +120,43 @@ struct ContentView: View {
                 }
             )
         }
+    }
+    
+    private var testAudioControls: some View {
+        VStack(spacing: 8) {
+            Button("Load Test Audio") {
+                showingTestAudioPicker = true
+            }
+            .padding()
+            .background(Color.orange)
+            .foregroundColor(.white)
+            .cornerRadius(8)
+            .accessibilityIdentifier("loadTestAudioButton")
+            
+            if showingTestAudioPicker {
+                testAudioPicker
+            }
+        }
+    }
+    
+    private var testAudioPicker: some View {
+        VStack(spacing: 4) {
+            ForEach(["konnichiwa", "arigatou", "sayounara", "weather", "library"], id: \.self) { fileName in
+                Button(fileName.capitalized) {
+                    // This would trigger test audio loading in a real implementation
+                    showingTestAudioPicker = false
+                    print("Test mode: Selected audio file \(fileName).wav")
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(6)
+                .accessibilityIdentifier(fileName)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
     }
     
 }
@@ -248,6 +296,7 @@ struct TranscriptionDisplay: View {
             .font(.title2)
             .foregroundColor(.secondary)
             .padding()
+            .accessibilityIdentifier("placeholderText")
     }
     
     private var transcriptionContent: some View {
@@ -261,12 +310,14 @@ struct TranscriptionDisplay: View {
                     textColor: .primary
                 )
                 .padding(.horizontal)
+                .accessibilityIdentifier("furiganaTextView")
             } else {
                 // Fallback to original display if no tokens
                 Text(transcribedText)
                     .font(.system(size: 32))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+                    .accessibilityIdentifier("transcriptionResult")
             }
             
             // English translation - only show when not recording
@@ -274,6 +325,7 @@ struct TranscriptionDisplay: View {
                 let _ = print("TranscriptionDisplay: Showing TranslationView for '\(transcribedText)'")
                 TranslationView(textToTranslate: transcribedText)
                     .id(transcribedText) // Force recreation when text changes
+                    .accessibilityIdentifier("translationResult")
             } else if !isRecording && !transcribedText.isEmpty && !translationAvailable {
                 VStack(spacing: 8) {
                     Divider()
@@ -294,6 +346,7 @@ struct TranscriptionDisplay: View {
             .font(.caption)
             .foregroundColor(.blue)
             .padding(.top, 4)
+            .accessibilityIdentifier("transcriptionTime")
     }
     
     private func checkTranslationAvailability() {
@@ -374,6 +427,7 @@ struct RecordButton: View {
             recordButtonContent
         }
         .simultaneousGesture(pushToTalkGesture)
+        .accessibilityIdentifier("recordButton")
     }
     
     private var recordButtonContent: some View {
@@ -461,6 +515,7 @@ struct PlaybackButton: View {
                 .background(Color.green)
                 .cornerRadius(20)
         }
+        .accessibilityIdentifier("playRecordingButton")
     }
 }
 

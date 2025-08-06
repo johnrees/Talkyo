@@ -47,6 +47,7 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
+            .accessibilityIdentifier("transcriptionModeSelector")
             .onChange(of: transcriptionMode) { _, newValue in
                 transcriptionService.setTranscriptionMode(newValue)
             }
@@ -66,6 +67,7 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
+            .accessibilityIdentifier("recognitionModeSelector")
             .onChange(of: selectedMode) { _, newValue in
                 transcriptionService.setRecognitionMode(newValue)
             }

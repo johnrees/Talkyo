@@ -22,8 +22,8 @@ final class TranscriptionService: ObservableObject {
     
     // MARK: - Dependencies
     
-    private let speechRecognizer = SpeechRecognizer()
-    private let audioRecorder = AudioRecorder()
+    private let speechRecognizer: SpeechRecognizer
+    private let audioRecorder: any AudioRecorderProtocol
     
     // MARK: - Private Properties
     
@@ -31,7 +31,11 @@ final class TranscriptionService: ObservableObject {
     
     // MARK: - Initialization
     
-    init() {
+    init(speechRecognizer: SpeechRecognizer = SpeechRecognizer(),
+         audioRecorder: any AudioRecorderProtocol = AudioRecorder()) {
+        self.speechRecognizer = speechRecognizer
+        self.audioRecorder = audioRecorder
+        
         setupObservers()
         setupSpeechRecognizerCallbacks()
     }
