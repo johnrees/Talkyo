@@ -45,69 +45,48 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var selectedMode = SpeechRecognitionMode.onDevice
     @State private var transcriptionMode = TranscriptionMode.standard
+    @State private var showingSettings = false
     
     var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 16) {
-                transcriptionModeSelector
-                recognitionModeSelector
+        NavigationView {
+            VStack(spacing: 20) {
+                TranscriptionDisplay(
+                    transcribedText: transcriptionService.transcribedText,
+                    furiganaTokens: transcriptionService.furiganaTokens,
+                    processingTime: transcriptionService.transcriptionTime,
+                    isLiveMode: transcriptionMode == .live,
+                    isRecording: isRecording
+                )
+                .padding(.top, 20)
+                
+                Spacer()
+                
+                controlButtons
+                    .padding(.bottom, 50)
             }
-            .padding(.top, 20)
-            
-            TranscriptionDisplay(
-                transcribedText: transcriptionService.transcribedText,
-                furiganaTokens: transcriptionService.furiganaTokens,
-                processingTime: transcriptionService.transcriptionTime,
-                isLiveMode: transcriptionMode == .live,
-                isRecording: isRecording
-            )
-            
-            Spacer()
-            
-            controlButtons
-                .padding(.bottom, 50)
+            .navigationTitle("Talkyo")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showingSettings = true
+                    }) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.title2)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView(
+                    selectedMode: $selectedMode,
+                    transcriptionMode: $transcriptionMode,
+                    transcriptionService: transcriptionService
+                )
+            }
         }
     }
     
     // MARK: - View Components
-    
-    private var transcriptionModeSelector: some View {
-        VStack(spacing: 10) {
-            Text("Transcription Mode")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Picker("Mode", selection: $transcriptionMode) {
-                ForEach(TranscriptionMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .onChange(of: transcriptionMode) { _, newValue in
-                transcriptionService.setTranscriptionMode(newValue)
-            }
-        }
-    }
-    
-    private var recognitionModeSelector: some View {
-        VStack(spacing: 10) {
-            Text("Recognition Mode")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Picker("Mode", selection: $selectedMode) {
-                ForEach(SpeechRecognitionMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .onChange(of: selectedMode) { _, newValue in
-                transcriptionService.setRecognitionMode(newValue)
-            }
-        }
-    }
     
     private var controlButtons: some View {
         VStack(spacing: 16) {
