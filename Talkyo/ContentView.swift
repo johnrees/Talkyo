@@ -45,6 +45,7 @@ struct ContentView: View {
     @State private var isRecording = false
     @State private var selectedMode = SpeechRecognitionMode.onDevice
     @State private var transcriptionMode = TranscriptionMode.standard
+    @State private var numberFormat = NumberFormat.numerals
     @State private var showingSettings = false
     
     var body: some View {
@@ -80,6 +81,7 @@ struct ContentView: View {
                 SettingsView(
                     selectedMode: $selectedMode,
                     transcriptionMode: $transcriptionMode,
+                    numberFormat: $numberFormat,
                     transcriptionService: transcriptionService
                 )
             }

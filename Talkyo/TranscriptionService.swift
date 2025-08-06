@@ -28,6 +28,7 @@ final class TranscriptionService: ObservableObject {
     // MARK: - Private Properties
     
     private var transcriptionMode: TranscriptionMode = .standard
+    private var numberFormat: NumberFormat = .numerals
     
     // MARK: - Initialization
     
@@ -46,6 +47,16 @@ final class TranscriptionService: ObservableObject {
     func setTranscriptionMode(_ mode: TranscriptionMode) {
         transcriptionMode = mode
         clearTranscription()
+    }
+    
+    func setNumberFormat(_ format: NumberFormat) {
+        numberFormat = format
+        // Re-apply number formatting to current text if it exists
+        if !transcribedText.isEmpty {
+            let convertedText = JapaneseNumberFormatter.convertNumbers(in: transcribedText, to: format)
+            transcribedText = convertedText
+            furiganaTokens = FuriganaGenerator.generateTokens(for: convertedText)
+        }
     }
     
     func startRecording() {
@@ -179,8 +190,11 @@ final class TranscriptionService: ObservableObject {
     }
     
     private func updateTranscription(with text: String, isFinal: Bool, mode: String? = nil, elapsedTime: TimeInterval? = nil) {
-        transcribedText = text
-        furiganaTokens = FuriganaGenerator.generateTokens(for: text)
+        // Apply number format conversion
+        let convertedText = JapaneseNumberFormatter.convertNumbers(in: text, to: numberFormat)
+        
+        transcribedText = convertedText
+        furiganaTokens = FuriganaGenerator.generateTokens(for: convertedText)
         
         if isFinal {
             if let elapsedTime = elapsedTime, let mode = mode {

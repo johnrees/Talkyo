@@ -8,6 +8,7 @@ import SwiftUI
 struct SettingsView: View {
     @Binding var selectedMode: SpeechRecognitionMode
     @Binding var transcriptionMode: TranscriptionMode
+    @Binding var numberFormat: NumberFormat
     @ObservedObject var transcriptionService: TranscriptionService
     @Environment(\.dismiss) private var dismiss
     
@@ -17,6 +18,7 @@ struct SettingsView: View {
                 VStack(spacing: 16) {
                     transcriptionModeSelector
                     recognitionModeSelector
+                    numberFormatSelector
                 }
                 .padding(.top, 40)
                 
@@ -68,6 +70,25 @@ struct SettingsView: View {
             .padding(.horizontal)
             .onChange(of: selectedMode) { _, newValue in
                 transcriptionService.setRecognitionMode(newValue)
+            }
+        }
+    }
+    
+    private var numberFormatSelector: some View {
+        VStack(spacing: 10) {
+            Text("Number Format")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Picker("Format", selection: $numberFormat) {
+                ForEach(NumberFormat.allCases, id: \.self) { format in
+                    Text(format.rawValue).tag(format)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .onChange(of: numberFormat) { _, newValue in
+                transcriptionService.setNumberFormat(newValue)
             }
         }
     }
