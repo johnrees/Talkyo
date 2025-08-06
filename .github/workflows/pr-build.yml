@@ -34,8 +34,9 @@ jobs:
 
       - name: Resolve Swift Package Dependencies
         run: |
-          cd Talkyo.xcodeproj
-          xcodebuild -resolvePackageDependencies -scheme Talkyo
+          xcodebuild -resolvePackageDependencies \
+            -project Talkyo.xcodeproj \
+            -scheme Talkyo
         working-directory: .
 
       - name: Build for iOS Simulator
