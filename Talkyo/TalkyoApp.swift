@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+/// Main entry point for the Talkyo application
 @main
 struct TalkyoApp: App {
     var body: some Scene {
