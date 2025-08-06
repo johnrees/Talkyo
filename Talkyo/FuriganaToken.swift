@@ -9,13 +9,25 @@ import Foundation
 
 // MARK: - Furigana Token
 
-/// A data structure representing a segment of Japanese text with its optional furigana (hiragana) reading
+/// A data structure representing a segment of Japanese text with its optional furigana (hiragana) reading and pitch accent
 struct FuriganaToken: Equatable {
     /// The base text (may contain kanji, hiragana, katakana, or other characters)
     let text: String
     
     /// The hiragana reading of the text (nil if no reading is needed)
     let reading: String?
+    
+    /// The pitch accent pattern for this token
+    let pitchAccent: PitchAccentPattern?
+    
+    // MARK: - Initializers
+    
+    /// Initialize with text, reading, and optional pitch accent
+    init(text: String, reading: String?, pitchAccent: PitchAccentPattern? = nil) {
+        self.text = text
+        self.reading = reading
+        self.pitchAccent = pitchAccent
+    }
     
     /// Determines if this token needs furigana display above it
     /// Returns true if:
@@ -25,6 +37,16 @@ struct FuriganaToken: Equatable {
     var needsFurigana: Bool {
         guard let reading = reading else { return false }
         return reading != text && containsKanji
+    }
+    
+    /// Determines if this token has pitch accent information
+    var hasPitchAccent: Bool {
+        return pitchAccent != nil
+    }
+    
+    /// Returns the pitch pattern array for this token (1=high, 0=low)
+    var pitchPattern: [Int]? {
+        return pitchAccent?.generatePitchArray()
     }
     
     // MARK: - Private Properties
