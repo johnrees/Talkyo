@@ -19,7 +19,7 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "16.2"
+          xcode-version: "latest"
 
       - name: Cache Swift Package Manager
         uses: actions/cache@v4
@@ -38,6 +38,14 @@ jobs:
             -scheme Talkyo
         working-directory: .
 
+      - name: List Available Simulators
+        run: |
+          echo "Available Xcode version:"
+          xcodebuild -version
+          echo ""
+          echo "Available simulators:"
+          xcrun simctl list devices available
+
       - name: Build for iOS Simulator
         run: |
           # Start timing
@@ -46,7 +54,7 @@ jobs:
           xcodebuild \
             -project Talkyo.xcodeproj \
             -scheme Talkyo \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             -configuration Debug \
             build \
             CODE_SIGNING_ALLOWED=NO \
@@ -110,7 +118,7 @@ jobs:
           ## 📱 iOS Build Statistics
 
           ✅ **Build Status**: Successful
-          🎯 **Target**: iOS Simulator (iPhone 16, iOS 18.5)
+          🎯 **Target**: iOS Simulator (iPhone 16)
           📦 **Bundle Size**: ${BUNDLE_SIZE_MB} MB
           ⏱️ **Build Time**: ${BUILD_TIME_FORMATTED}
           📚 **Dependencies**: ${DEP_COUNT} Swift packages
