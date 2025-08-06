@@ -44,7 +44,10 @@ enum FuriganaGenerator {
             
             let tokenText = String(text[startIndex..<endIndex])
             let reading = extractHiraganaReading(from: tokenizer)
-            tokens.append(FuriganaToken(text: tokenText, reading: reading))
+            
+            // Split tokens with mixed kanji and non-kanji characters for better alignment
+            let splitTokens = splitMixedToken(text: tokenText, reading: reading)
+            tokens.append(contentsOf: splitTokens)
             
             lastEndIndex = endIndex
             tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
@@ -61,9 +64,72 @@ enum FuriganaGenerator {
     
     // MARK: - Private Methods
     
+    private static func splitMixedToken(text: String, reading: String?) -> [FuriganaToken] {
+        // If the token is purely kanji, hiragana, katakana, or other, return as single token
+        let hasKanji = text.contains { isKanji($0) }
+        let hasHiragana = text.contains { isHiragana($0) }
+        let hasKatakana = text.contains { isKatakana($0) }
+        
+        // If it's homogeneous or very short, keep as one token
+        let characterTypes = [hasKanji, hasHiragana, hasKatakana].filter { $0 }.count
+        if characterTypes <= 1 || text.count == 1 {
+            return [FuriganaToken(text: text, reading: reading)]
+        }
+        
+        // Split mixed tokens character by character for better alignment
+        var tokens: [FuriganaToken] = []
+        var currentSegment = ""
+        var currentType: CharacterType?
+        
+        for character in text {
+            let charType = getCharacterType(character)
+            
+            if currentType == charType {
+                currentSegment.append(character)
+            } else {
+                // Finalize current segment
+                if !currentSegment.isEmpty {
+                    let segmentReading = (currentType == .kanji && reading != nil) ? 
+                        getReadingForSegment(currentSegment, from: reading!) : nil
+                    tokens.append(FuriganaToken(text: currentSegment, reading: segmentReading))
+                }
+                
+                // Start new segment
+                currentSegment = String(character)
+                currentType = charType
+            }
+        }
+        
+        // Add final segment
+        if !currentSegment.isEmpty {
+            let segmentReading = (currentType == .kanji && reading != nil) ? 
+                getReadingForSegment(currentSegment, from: reading!) : nil
+            tokens.append(FuriganaToken(text: currentSegment, reading: segmentReading))
+        }
+        
+        return tokens
+    }
+    
+    private enum CharacterType {
+        case kanji, hiragana, katakana, other
+    }
+    
+    private static func getCharacterType(_ character: Character) -> CharacterType {
+        if isKanji(character) { return .kanji }
+        if isHiragana(character) { return .hiragana }
+        if isKatakana(character) { return .katakana }
+        return .other
+    }
+    
+    private static func getReadingForSegment(_ segment: String, from fullReading: String) -> String? {
+        // For now, return the full reading for kanji segments
+        // This could be improved with more sophisticated reading mapping
+        return fullReading
+    }
+    
     private static func textRequiresFurigana(_ text: String) -> Bool {
         text.contains { character in
-            isKanji(character) || isKatakana(character)
+            isKanji(character)
         }
     }
     
@@ -115,5 +181,14 @@ enum FuriganaGenerator {
         
         let katakanaRange = 0x30A0...0x30FF
         return katakanaRange.contains(Int(unicodeScalar.value))
+    }
+    
+    private static func isHiragana(_ character: Character) -> Bool {
+        guard let unicodeScalar = character.unicodeScalars.first else {
+            return false
+        }
+        
+        let hiraganaRange = 0x3040...0x309F
+        return hiraganaRange.contains(Int(unicodeScalar.value))
     }
 }

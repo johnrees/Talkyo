@@ -21,13 +21,20 @@ struct FuriganaToken: Equatable {
     /// Returns true if:
     /// - There is a reading available
     /// - The reading differs from the base text
-    /// - The text contains kanji or katakana characters
+    /// - The text contains kanji characters (katakana excluded)
     var needsFurigana: Bool {
         guard let reading = reading else { return false }
-        return reading != text && containsKanjiOrKatakana
+        return reading != text && containsKanji
     }
     
     // MARK: - Private Properties
+    
+    /// Checks if the text contains any kanji characters
+    private var containsKanji: Bool {
+        text.contains { character in
+            isKanji(character)
+        }
+    }
     
     /// Checks if the text contains any kanji or katakana characters
     private var containsKanjiOrKatakana: Bool {
