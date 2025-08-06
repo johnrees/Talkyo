@@ -1,3 +1,4 @@
+# PR Build Check - Validates that the iOS app builds successfully
 name: PR Build Check
 
 on:
@@ -158,3 +159,4 @@ jobs:
                 body: commentBody
               });
             }
+
