@@ -41,6 +41,13 @@ final class SpeechRecognizer: NSObject, ObservableObject {
     
     private var recognizer: SFSpeechRecognizer?
     private var currentConfiguration = SpeechRecognitionMode.onDevice
+    private var recognitionTask: SFSpeechRecognitionTask?
+    private var audioBufferRequest: SFSpeechAudioBufferRecognitionRequest?
+    
+    // MARK: - Callbacks
+    
+    var onPartialTranscription: ((String) -> Void)?
+    var onFinalTranscription: ((SpeechRecognitionResult) -> Void)?
     
     // MARK: - Constants
     
@@ -84,6 +91,69 @@ final class SpeechRecognizer: NSObject, ObservableObject {
         }
     }
     
+    func startLiveTranscription() throws {
+        guard let recognizer = recognizer else {
+            throw SpeechRecognitionError.recognizerUnavailable
+        }
+        
+        guard recognizer.isAvailable else {
+            throw SpeechRecognitionError.recognizerUnavailable
+        }
+        
+        // Cancel any existing task
+        stopLiveTranscription()
+        
+        // Create and configure the request
+        audioBufferRequest = SFSpeechAudioBufferRecognitionRequest()
+        guard let request = audioBufferRequest else { return }
+        
+        request.shouldReportPartialResults = true
+        
+        // Enable punctuation for iOS 16+
+        if #available(iOS 16.0, *) {
+            request.addsPunctuation = true
+            request.taskHint = .dictation
+        }
+        
+        // Configure recognition mode
+        configureRecognitionMode(for: request)
+        
+        // Start the recognition task
+        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor in
+                if let error = error {
+                    print("Live recognition error: \(error)")
+                    self?.stopLiveTranscription()
+                    return
+                }
+                
+                if let result = result {
+                    let transcription = result.bestTranscription.formattedString
+                    
+                    if result.isFinal {
+                        self?.onFinalTranscription?(SpeechRecognitionResult(
+                            text: transcription,
+                            recognitionMode: self?.currentConfiguration.rawValue ?? ""
+                        ))
+                    } else {
+                        self?.onPartialTranscription?(transcription)
+                    }
+                }
+            }
+        }
+    }
+    
+    func stopLiveTranscription() {
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        audioBufferRequest?.endAudio()
+        audioBufferRequest = nil
+    }
+    
+    func appendAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+        audioBufferRequest?.append(buffer)
+    }
+    
     // MARK: - Private Methods
     
     private func setupRecognizer() {
@@ -115,13 +185,19 @@ final class SpeechRecognizer: NSObject, ObservableObject {
             request.taskHint = .dictation
         }
         
+        // Additional settings for iOS 18+
+        if #available(iOS 18.0, *) {
+            // Ensure punctuation is enabled for iOS 18
+            request.addsPunctuation = true
+        }
+        
         // Apply configuration mode
         configureRecognitionMode(for: request)
         
         return request
     }
     
-    private func configureRecognitionMode(for request: SFSpeechURLRecognitionRequest) {
+    private func configureRecognitionMode(for request: SFSpeechRecognitionRequest) {
         switch currentConfiguration {
         case .onDevice:
             request.requiresOnDeviceRecognition = true

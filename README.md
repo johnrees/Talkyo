@@ -4,11 +4,13 @@ A simple iOS app for Japanese speech transcription with furigana generation.
 
 ## Features
 
-- **Push-to-Talk Recording**: Hold to record, release to transcribe
-- **Japanese Speech Recognition**: Uses Apple's Speech Recognition framework
-- **Automatic Furigana**: Generates hiragana readings for kanji
-- **Recognition Modes**: Choose between on-device (fast/private), server (accurate), or hybrid
-- **Automatic Punctuation**: Adds periods and commas based on speech patterns
+- **Transcription Modes**: Choose between Standard (post-processing) or Live (real-time)
+- **Push-to-Talk Recording**: Hold to record, release to transcribe, swipe to cancel
+- **Japanese Speech Recognition**: Powered by Apple's Speech Recognition framework  
+- **Furigana Display**: Automatic hiragana readings above kanji characters
+- **Custom Japanese Font**: KosugiMaru font optimized for readability
+- **Recognition Options**: On-device (private), server (accurate), or hybrid
+- **Haptic Feedback**: Tactile feedback for all recording actions
 - **Audio Playback**: Review your recordings after transcription
 
 ## Requirements
@@ -43,11 +45,16 @@ The app will request the following permissions on first launch:
 ## Usage
 
 1. Launch the app
-2. Select your preferred recognition mode (On-Device, Server, or Hybrid)
-3. Press and hold the microphone button to record
-4. Release to stop recording and start transcription
-5. View the transcribed text with furigana reading below
-6. Tap the play button to review your recording
+2. Select transcription mode (Standard or Live)
+3. Choose recognition mode (On-device, Server, or Hybrid)
+4. Press and hold the microphone button to record
+5. Release to transcribe or swipe away to cancel
+6. View transcribed text with furigana above kanji
+7. Tap play to review your recording
+
+### Transcription Modes
+- **Standard**: Records complete audio, then transcribes (more accurate, shows processing time)
+- **Live**: Real-time transcription as you speak (immediate feedback)
 
 ## Architecture
 

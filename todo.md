@@ -1,19 +1,28 @@
 # Talkyo Development Roadmap
 
-## Phase 0: Visual Improvements (Current Priority)
+## Phase 0: Visual Improvements ✅ COMPLETED
 
-### 0.1 Ruby Text (Furigana) Display ⭐ NEXT
-- [ ] Replace current two-line display with proper ruby text (furigana above kanji)
-- [ ] Research iOS text rendering options:
-  - NSAttributedString with kCTRubyAnnotationAttributeName
-  - Custom SwiftUI view with Text overlays
-  - Web view with HTML ruby tags (fallback option)
-- [ ] Create RubyTextView component that positions hiragana above kanji
-- [ ] Handle text wrapping and sizing appropriately
-- [ ] Ensure proper alignment between base text and ruby annotations
-- [ ] Test with various text lengths and kanji combinations
+### 0.1 Ruby Text (Furigana) Display ✅ COMPLETED (2025-08-04)
+- [x] Replace current two-line display with proper ruby text (furigana above kanji)
+- [x] Research iOS text rendering options:
+  - NSAttributedString with kCTRubyAnnotationAttributeName (attempted, had memory issues)
+  - Custom SwiftUI view with Text overlays (selected approach)
+  - Web view with HTML ruby tags (implemented as fallback)
+- [x] Create FuriganaTextView component that positions hiragana above kanji
+- [x] Handle text wrapping and sizing appropriately
+- [x] Ensure proper alignment between base text and ruby annotations
+- [x] Test with various text lengths and kanji combinations
 
-## Phase 1: Core Enhancements
+### Implementation Details:
+- Created FuriganaToken data structure to pair text segments with readings
+- Modified FuriganaGenerator to return token arrays
+- Implemented SwiftUI-based FuriganaTextView for reliable rendering
+- Furigana appears at 50% font size above kanji characters
+- Non-kanji text is properly aligned with vertical padding
+- Integrated KosugiMaru-Regular font for improved Japanese text rendering
+- Applied bold weight to main text, semibold to furigana
+
+## Phase 1: Core Enhancements ⭐ CURRENT PRIORITY
 
 ### 1.1 Save Transcriptions & Recordings
 - [ ] Create data model for saved sessions (timestamp, audio file, transcription, kanji/kana)
@@ -72,11 +81,17 @@
 
 ## Technical Considerations
 
-### Ruby Text Implementation
-- Core Text framework with CTRubyAnnotation for native rendering
-- Consider performance with large amounts of text
-- Handle edge cases (long readings, compound words)
-- Accessibility support for VoiceOver
+### Ruby Text Implementation ✅ COMPLETED
+- Attempted Core Text framework with CTRubyAnnotation but encountered memory management issues
+- Successfully implemented SwiftUI approach with Text overlays
+- Performance is good with the SwiftUI implementation
+- Edge cases handled through proper token generation
+- VoiceOver support through standard SwiftUI Text components
+
+### UI/UX Improvements ✅ COMPLETED
+- Added 0.2s delay after button release to prevent cutting off speech
+- Integrated KosugiMaru-Regular font for better Japanese text readability
+- Applied appropriate font weights for visual hierarchy
 
 ### Audio Processing
 - Investigate Core Audio for pitch detection
@@ -99,7 +114,7 @@
 - Background process heavy computations
 
 ## Dependencies to Research
-- [ ] Ruby text: Core Text CTRubyAnnotation API
+- [x] Ruby text: ~~Core Text CTRubyAnnotation API~~ → SwiftUI implementation chosen
 - [ ] Pitch detection: TarsosDSP-iOS or custom implementation
 - [ ] Translation: Apple Translation framework requirements
 - [ ] Karaoke timing: AVSpeechSynthesizer boundary detection
