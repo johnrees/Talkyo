@@ -44,7 +44,10 @@ enum FuriganaGenerator {
             
             let tokenText = String(text[startIndex..<endIndex])
             let reading = extractHiraganaReading(from: tokenizer)
-            tokens.append(FuriganaToken(text: tokenText, reading: reading))
+            
+            // Split mixed tokens (kanji + hiragana/katakana) into proper segments
+            let splitTokens = splitMixedToken(text: tokenText, reading: reading)
+            tokens.append(contentsOf: splitTokens)
             
             lastEndIndex = endIndex
             tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
@@ -60,6 +63,107 @@ enum FuriganaGenerator {
     }
     
     // MARK: - Private Methods
+    
+    /// Split mixed tokens (containing both kanji and hiragana/katakana) into properly aligned segments
+    private static func splitMixedToken(text: String, reading: String?) -> [FuriganaToken] {
+        guard let reading = reading, !text.isEmpty else {
+            return [FuriganaToken(text: text, reading: nil)]
+        }
+        
+        // If token is pure hiragana or katakana, no furigana needed
+        if text.allSatisfy({ isHiragana($0) || isKatakana($0) }) {
+            return [FuriganaToken(text: text, reading: nil)]
+        }
+        
+        // If token is pure kanji, use the whole reading
+        if text.allSatisfy({ isKanji($0) }) {
+            return [FuriganaToken(text: text, reading: reading)]
+        }
+        
+        // Handle mixed tokens: split by character type and distribute reading
+        return splitMixedTokenByCharacterType(text: text, reading: reading)
+    }
+    
+    /// Split a mixed token containing different character types and distribute the reading appropriately
+    private static func splitMixedTokenByCharacterType(text: String, reading: String) -> [FuriganaToken] {
+        // Find hiragana/katakana suffixes in the original text and remove them from reading
+        let trimmedReading = removeMatchingSuffixFromReading(originalText: text, reading: reading)
+        
+        var result: [FuriganaToken] = []
+        var currentSegment = ""
+        var currentType: CharacterType?
+        
+        for char in text {
+            let charType = getCharacterType(char)
+            
+            // If character type changes, process the accumulated segment
+            if let existingType = currentType, existingType != charType {
+                let token = createTokenForSegment(
+                    text: currentSegment,
+                    type: existingType,
+                    fullReading: trimmedReading,
+                    originalText: text
+                )
+                result.append(token)
+                currentSegment = String(char)
+                currentType = charType
+            } else {
+                currentSegment += String(char)
+                currentType = charType
+            }
+        }
+        
+        // Process the final segment
+        if !currentSegment.isEmpty, let type = currentType {
+            let token = createTokenForSegment(
+                text: currentSegment,
+                type: type,
+                fullReading: trimmedReading,
+                originalText: text
+            )
+            result.append(token)
+        }
+        
+        return result
+    }
+    
+    /// Remove hiragana/katakana suffix from reading that matches the original text
+    private static func removeMatchingSuffixFromReading(originalText: String, reading: String) -> String {
+        // Find the longest hiragana/katakana suffix in the original text
+        var suffixLength = 0
+        let textArray = Array(originalText)
+        
+        for i in stride(from: textArray.count - 1, through: 0, by: -1) {
+            let char = textArray[i]
+            if isHiragana(char) || isKatakana(char) {
+                suffixLength += 1
+            } else {
+                break
+            }
+        }
+        
+        // If we found a suffix, remove it from the reading
+        if suffixLength > 0 {
+            let suffix = String(textArray.suffix(suffixLength))
+            if reading.hasSuffix(suffix) {
+                return String(reading.dropLast(suffix.count))
+            }
+        }
+        
+        return reading
+    }
+    
+    /// Create a token for a specific segment with appropriate reading
+    private static func createTokenForSegment(text: String, type: CharacterType, fullReading: String, originalText: String) -> FuriganaToken {
+        switch type {
+        case .kanji:
+            // Kanji gets the available reading (after suffixes are removed)
+            return FuriganaToken(text: text, reading: fullReading.isEmpty ? nil : fullReading)
+        case .hiragana, .katakana, .other:
+            // Hiragana/katakana/other don't need furigana
+            return FuriganaToken(text: text, reading: nil)
+        }
+    }
     
     private static func textRequiresFurigana(_ text: String) -> Bool {
         text.contains { character in
@@ -99,6 +203,27 @@ enum FuriganaGenerator {
     
     // MARK: - Character Classification
     
+    /// Character types for Japanese text processing
+    private enum CharacterType {
+        case kanji
+        case hiragana
+        case katakana
+        case other
+    }
+    
+    /// Determine the character type of a given character
+    private static func getCharacterType(_ character: Character) -> CharacterType {
+        if isKanji(character) {
+            return .kanji
+        } else if isHiragana(character) {
+            return .hiragana
+        } else if isKatakana(character) {
+            return .katakana
+        } else {
+            return .other
+        }
+    }
+    
     private static func isKanji(_ character: Character) -> Bool {
         guard let unicodeScalar = character.unicodeScalars.first else {
             return false
@@ -106,6 +231,15 @@ enum FuriganaGenerator {
         
         let kanjiRange = 0x4E00...0x9FFF
         return kanjiRange.contains(Int(unicodeScalar.value))
+    }
+    
+    private static func isHiragana(_ character: Character) -> Bool {
+        guard let unicodeScalar = character.unicodeScalars.first else {
+            return false
+        }
+        
+        let hiraganaRange = 0x3040...0x309F
+        return hiraganaRange.contains(Int(unicodeScalar.value))
     }
     
     private static func isKatakana(_ character: Character) -> Bool {
