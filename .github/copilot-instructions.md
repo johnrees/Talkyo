@@ -1,5 +1,15 @@
 # Copilot Custom Instructions for Talkyo
 
+## Expert Swift Rules
+This project includes comprehensive Swift development rules in `.cursor/rules/` directory. While these are primarily for Cursor IDE, they contain expert Swift patterns that should be followed by all AI assistants:
+- `swift-ios-project.mdc` - Project structure and architecture
+- `swiftui-patterns.mdc` - Modern SwiftUI state management
+- `swift-concurrency.mdc` - Swift 6 concurrency patterns
+- `swift-testing.mdc` - Testing best practices
+- `xcodebuildmcp-tools.mdc` - Build tool usage
+- `foundation-models.mdc` - Foundation type patterns
+- `general-rules.mdc` - Swift coding standards
+
 ## Project Overview
 - This is a native iOS app for Japanese speech transcription built with Swift 6.1+ and SwiftUI
 - Targets iOS 18.0+ for latest Speech Recognition and SwiftUI features

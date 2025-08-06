@@ -3,6 +3,21 @@
 ## Overview
 Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speech Recognition framework. It features push-to-talk recording with swipe-to-cancel, both standard and real-time transcription modes, automatic punctuation, and furigana display.
 
+## Development Guidelines
+This project includes comprehensive Swift development rules in `.cursor/rules/` that Claude should follow:
+- **swift-ios-project.mdc**: Project structure and architecture patterns
+- **swiftui-patterns.mdc**: Modern SwiftUI data flow and state management
+- **swift-concurrency.mdc**: Swift 6 concurrency with actors and Sendable
+- **swift-testing.mdc**: Swift Testing framework guidelines
+- **xcodebuildmcp-tools.mdc**: Build and deployment tool usage
+- **foundation-models.mdc**: Foundation types and patterns
+- **general-rules.mdc**: General Swift coding standards
+
+When working on this project, reference these rules for consistent, high-quality Swift code.
+
+## Project Structure Note
+Unlike the template structure in `.cursor/rules/swift-ios-project.mdc`, Talkyo currently uses a simpler structure with all Swift files directly in the Talkyo/ directory rather than a separate SPM package. The architectural principles and patterns from the rules still apply, but the file organization is flatter.
+
 ## Architecture
 
 ### ContentView.swift
@@ -231,3 +246,123 @@ When persistence is needed:
 - All network calls must use HTTPS
 - Request minimal permissions
 - Follow App Store privacy guidelines
+
+## Swift Patterns Reference
+
+### SwiftUI View Patterns
+```swift
+// Use @Observable for view models (iOS 17+)
+@Observable
+class TranscriptionModel {
+    var text: String = ""
+    var isRecording = false
+}
+
+// Views as pure state expressions
+struct TranscriptionView: View {
+    @State private var model = TranscriptionModel()
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        // View is just a representation of state
+    }
+}
+
+// Use .task for async operations (auto-cancellation)
+.task {
+    try? await loadData()
+}
+
+// NEVER use Task { } in onAppear - causes memory leaks
+```
+
+### Concurrency Patterns
+```swift
+// Actor for thread-safe operations
+actor AudioProcessor {
+    private var buffer: [Float] = []
+    
+    func process(_ samples: [Float]) async {
+        // Thread-safe processing
+    }
+}
+
+// @MainActor for UI updates
+@MainActor
+func updateUI() {
+    // All UI updates here
+}
+
+// Sendable conformance for Swift 6
+struct TranscriptionResult: Sendable {
+    let text: String
+    let confidence: Float
+}
+```
+
+### Error Handling Patterns
+```swift
+enum TranscriptionError: LocalizedError {
+    case microphoneAccessDenied
+    case recognitionFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .microphoneAccessDenied:
+            return "Microphone access is required"
+        case .recognitionFailed(let reason):
+            return "Recognition failed: \(reason)"
+        }
+    }
+}
+
+// Use Result for explicit error handling
+func transcribe() async -> Result<String, TranscriptionError> {
+    // Implementation
+}
+```
+
+### Testing Patterns
+```swift
+import Testing
+
+@Test("Japanese text is transcribed correctly")
+func transcribesJapanese() async throws {
+    let recognizer = SpeechRecognizer()
+    let result = try await recognizer.transcribe(testAudio)
+    #expect(result.contains("こんにちは"))
+}
+
+@Test("Furigana is generated for kanji", arguments: [
+    ("新しい", "あたらしい"),
+    ("日本", "にほん")
+])
+func generatesFurigana(input: String, expected: String) {
+    let furigana = FuriganaGenerator.generate(for: input)
+    #expect(furigana.reading == expected)
+}
+```
+
+## Key Principles from Expert Rules
+
+1. **No ViewModels**: Use SwiftUI's native state management
+2. **Swift Concurrency Only**: No GCD, no completion handlers
+3. **Value Types First**: Prefer struct over class
+4. **Early Returns**: Guard and fail fast
+5. **Sendable Everything**: All types crossing concurrency boundaries
+6. **Test Everything**: Use Swift Testing, not XCTest
+7. **Accessibility Always**: Every interactive element needs labels
+8. **No Force Unwrapping**: Use guard or if let
+9. **Use .task**: For view lifecycle async work
+10. **XcodeBuildMCP Tools**: For all build and test operations
+
+## Using the Development Rules
+
+When working on this project:
+1. **Read the relevant .cursor/rules files** before making changes to ensure consistency
+2. **Follow the patterns** demonstrated in the Swift Patterns Reference section above
+3. **Use XcodeBuildMCP tools** as shown in the examples rather than raw CLI commands
+4. **Apply Swift 6 concurrency** patterns with proper Sendable conformance
+5. **Write tests** using Swift Testing framework for all new features
+
+The rules in `.cursor/rules/` represent expert Swift knowledge and should be treated as the authoritative guide for code quality and architecture decisions in this project.
