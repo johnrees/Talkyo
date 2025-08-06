@@ -40,7 +40,9 @@
       "mcp__XcodeBuildMCP__build_sim_name_proj",
       "Bash(xcodebuild:*)",
       "Bash(git fetch:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

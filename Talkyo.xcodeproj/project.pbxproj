@@ -267,9 +267,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to transcribe your Japanese speech";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "This app needs speech recognition to transcribe your Japanese speech";
-				INFOPLIST_KEY_UIAppFonts = (
-					"KosugiMaru-Regular.ttf",
-				);
+				INFOPLIST_KEY_UIAppFonts = "KosugiMaru-Regular.ttf";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -300,9 +298,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to transcribe your Japanese speech";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "This app needs speech recognition to transcribe your Japanese speech";
-				INFOPLIST_KEY_UIAppFonts = (
-					"KosugiMaru-Regular.ttf",
-				);
+				INFOPLIST_KEY_UIAppFonts = "KosugiMaru-Regular.ttf";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -81,6 +81,46 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 - **Documentation**: Self-documenting code with clear naming
 - **Testing**: Designed for testability with dependency injection
 
+## Swift 6.1+ Style Guidelines
+
+### Naming & Conventions
+- Use `UpperCamelCase` for types, `lowerCamelCase` for properties/functions
+- Choose descriptive names (e.g., `calculateMonthlyRevenue()` not `calcRev`)
+- Prefer `struct` for models and data, use `class` only when reference semantics required
+- Leverage Swift's powerful enums with associated values for state representation
+- Prefer early return pattern over nested conditionals
+
+### Optionals & Error Handling
+- Use optionals with `if let`/`guard let` for nil handling
+- Never force-unwrap (`!`) without absolute certainty - prefer `guard` with failure path
+- Use `do/try/catch` for error handling with meaningful error types
+- Handle or propagate all errors - no empty catch blocks
+
+### Modern SwiftUI Data Flow (No ViewModels)
+- Views as pure state expressions - no ViewModels required
+- Use `@State` for view-specific state with enum-based view states
+- Use `@Observable` macro for making model classes observable
+- Use `@Environment` for app-wide services (Router, Theme, Account, etc.)
+- Use `let` properties for feature-specific services
+- Use `.task(id:)` and `.onChange(of:)` for side effects
+- Pass state between views using `@Binding`
+
+### Concurrency Best Practices
+- **@MainActor**: All UI updates must use @MainActor isolation
+- **Actors**: Use for expensive operations (disk I/O, network calls, computation)
+- **async/await**: Always prefer over completion handlers
+- **.task modifier**: Always use for async operations tied to view lifecycle (auto-cancellation)
+- **Avoid Task { } in onAppear**: This doesn't cancel automatically and can cause memory leaks
+- **Sendable**: All types crossing concurrency boundaries must be Sendable in Swift 6
+
+### Code Organization
+- Keep functions focused on single responsibility
+- Break large functions (>50 lines) into smaller units
+- Use extensions to organize by feature/protocol conformance
+- Prefer `let` over `var` - immutability by default
+- Use `[weak self]` in closures to prevent retain cycles
+- Always include `self.` when referring to instance properties in closures
+
 ## Development Notes
 
 - Test on physical device (audio features don't work in simulator)
@@ -115,3 +155,79 @@ Talkyo is a modern iOS app for Japanese speech transcription using Apple's Speec
 ## Future Development
 
 See [TODO.md](TODO.md) for the complete development roadmap. The next priorities include saving transcriptions, adding English translation, and implementing pitch accent detection.
+
+## Testing Guidelines
+
+### Swift Testing Framework
+- Use Swift Testing (`@Test`, `#expect`, `#require`) for all new tests
+- Write descriptive test names explaining what they verify
+- Test both happy paths and edge cases
+- Add tests for bug fixes to prevent regression
+- Use parameterized tests for data-driven scenarios
+
+Example:
+```swift
+import Testing
+
+@Test func userCanTranscribeJapanese() async throws {
+    let recognizer = SpeechRecognizer()
+    let result = try await recognizer.transcribe(audio: testAudio)
+    #expect(result.text.contains("こんにちは"))
+}
+```
+
+## XcodeBuildMCP Tool Usage
+
+When building and testing, use XcodeBuildMCP tools instead of raw CLI commands:
+
+```javascript
+// Build for simulator
+build_sim_name_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
+    scheme: "Talkyo",
+    simulatorName: "iPhone 16"
+})
+
+// Run tests
+test_sim_name_proj({
+    projectPath: "/path/to/Talkyo.xcodeproj",
+    scheme: "Talkyo",
+    simulatorName: "iPhone 16"
+})
+
+// UI automation
+describe_ui({ simulatorUuid: "UUID" })
+tap({ simulatorUuid: "UUID", x: 100, y: 200 })
+```
+
+## Data Persistence
+
+When persistence is needed:
+- Use SwiftData for complex relational data (never CoreData)
+- Use UserDefaults for simple preferences
+- Consider JSON files for small configuration data
+- Only persist what truly needs to survive app restarts
+
+## Performance Best Practices
+
+- Use `.id()` modifier sparingly (forces view recreation)
+- Implement Equatable on models for SwiftUI diffing optimization
+- Use LazyVStack/LazyHStack for large lists
+- Profile with Instruments when needed
+- @Observable tracks only accessed properties (better than @Published)
+
+## Accessibility Requirements
+
+- Always provide `accessibilityLabel` for interactive elements
+- Use `accessibilityIdentifier` for UI testing
+- Implement `accessibilityHint` where actions aren't obvious
+- Test with VoiceOver enabled
+- Support Dynamic Type
+
+## Security & Privacy
+
+- Never log sensitive information (audio data, transcriptions with PII)
+- Use Keychain for any credential storage
+- All network calls must use HTTPS
+- Request minimal permissions
+- Follow App Store privacy guidelines
