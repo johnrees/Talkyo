@@ -2,20 +2,49 @@
 //  FuriganaToken.swift
 //  Talkyo
 //
-//  Represents a text segment with its furigana reading
+//  Represents a text segment with its furigana reading and pitch accent pattern
 //
 
 import Foundation
 
+// MARK: - Pitch Accent Pattern
+
+/// Represents the pitch accent pattern for a Japanese word or phrase
+struct PitchAccentPattern: Equatable {
+    /// Array of pitch values (0 = low, 1 = high) for each mora
+    let pitches: [Int]
+    
+    /// The accent kernel position (where pitch drops from high to low)
+    /// 0 means no accent (flat), 1-n indicates position of accent
+    let accentPosition: Int
+    
+    /// Confidence level of this pitch accent data (0.0 to 1.0)
+    let confidence: Double
+    
+    init(pitches: [Int], accentPosition: Int = 0, confidence: Double = 1.0) {
+        self.pitches = pitches
+        self.accentPosition = accentPosition
+        self.confidence = confidence
+    }
+    
+    /// Returns true if this pattern has pitch accent information
+    var hasPitchData: Bool {
+        return !pitches.isEmpty && confidence > 0.0
+    }
+}
+
 // MARK: - Furigana Token
 
-/// A data structure representing a segment of Japanese text with its optional furigana (hiragana) reading
+/// A data structure representing a segment of Japanese text with its optional furigana (hiragana) reading and pitch accent
 struct FuriganaToken: Equatable {
     /// The base text (may contain kanji, hiragana, katakana, or other characters)
     let text: String
     
     /// The hiragana reading of the text (nil if no reading is needed)
     let reading: String?
+    
+    /// The pitch accent pattern for this token
+    let pitchPattern: PitchAccentPattern?
     
     /// Determines if this token needs furigana display above it
     /// Returns true if:
@@ -25,6 +54,25 @@ struct FuriganaToken: Equatable {
     var needsFurigana: Bool {
         guard let reading = reading else { return false }
         return reading != text && containsKanji
+    }
+    
+    /// Determines if this token has pitch accent information to display
+    var hasPitchAccent: Bool {
+        return pitchPattern?.hasPitchData == true
+    }
+    
+    /// Convenience initializer for tokens without pitch accent data
+    init(text: String, reading: String?) {
+        self.text = text
+        self.reading = reading
+        self.pitchPattern = nil
+    }
+    
+    /// Full initializer with pitch accent data
+    init(text: String, reading: String?, pitchPattern: PitchAccentPattern?) {
+        self.text = text
+        self.reading = reading
+        self.pitchPattern = pitchPattern
     }
     
     // MARK: - Private Properties

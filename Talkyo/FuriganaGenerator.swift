@@ -39,7 +39,7 @@ enum FuriganaGenerator {
             // Add any skipped characters (like punctuation) between tokens
             if lastEndIndex < startIndex {
                 let skippedText = String(text[lastEndIndex..<startIndex])
-                tokens.append(FuriganaToken(text: skippedText, reading: nil))
+                tokens.append(createTokenWithPitchAccent(text: skippedText, reading: nil))
             }
             
             let tokenText = String(text[startIndex..<endIndex])
@@ -56,7 +56,7 @@ enum FuriganaGenerator {
         // Add any remaining characters at the end
         if lastEndIndex < text.endIndex {
             let remainingText = String(text[lastEndIndex..<text.endIndex])
-            tokens.append(FuriganaToken(text: remainingText, reading: nil))
+            tokens.append(createTokenWithPitchAccent(text: remainingText, reading: nil))
         }
         
         return tokens
@@ -67,17 +67,17 @@ enum FuriganaGenerator {
     /// Split mixed tokens (containing both kanji and hiragana/katakana) into properly aligned segments
     private static func splitMixedToken(text: String, reading: String?) -> [FuriganaToken] {
         guard let reading = reading, !text.isEmpty else {
-            return [FuriganaToken(text: text, reading: nil)]
+            return [createTokenWithPitchAccent(text: text, reading: nil)]
         }
         
         // If token is pure hiragana or katakana, no furigana needed
         if text.allSatisfy({ isHiragana($0) || isKatakana($0) }) {
-            return [FuriganaToken(text: text, reading: nil)]
+            return [createTokenWithPitchAccent(text: text, reading: nil)]
         }
         
         // If token is pure kanji, use the whole reading
         if text.allSatisfy({ isKanji($0) }) {
-            return [FuriganaToken(text: text, reading: reading)]
+            return [createTokenWithPitchAccent(text: text, reading: reading)]
         }
         
         // Handle mixed tokens: split by character type and distribute reading
@@ -158,11 +158,24 @@ enum FuriganaGenerator {
         switch type {
         case .kanji:
             // Kanji gets the available reading (after suffixes are removed)
-            return FuriganaToken(text: text, reading: fullReading.isEmpty ? nil : fullReading)
+            return createTokenWithPitchAccent(text: text, reading: fullReading.isEmpty ? nil : fullReading)
         case .hiragana, .katakana, .other:
             // Hiragana/katakana/other don't need furigana
-            return FuriganaToken(text: text, reading: nil)
+            return createTokenWithPitchAccent(text: text, reading: nil)
         }
+    }
+    
+    /// Create a FuriganaToken with pitch accent data
+    /// - Parameters:
+    ///   - text: The base text
+    ///   - reading: Optional reading (hiragana)
+    /// - Returns: FuriganaToken with pitch accent information if available
+    private static func createTokenWithPitchAccent(text: String, reading: String?) -> FuriganaToken {
+        // Look up pitch accent pattern for this token
+        let pitchPattern = PitchAccentService.lookupPitchPattern(for: text, reading: reading)
+        
+        // Create token with pitch accent data
+        return FuriganaToken(text: text, reading: reading, pitchPattern: pitchPattern)
     }
     
     private static func textRequiresFurigana(_ text: String) -> Bool {
