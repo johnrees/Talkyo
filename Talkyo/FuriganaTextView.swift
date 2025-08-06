@@ -143,29 +143,91 @@ struct FuriganaCharacterView: View {
     }
     
     var body: some View {
-        if token.needsFurigana, let reading = token.reading {
-            // Display with furigana above
-            VStack(spacing: 0) {
-                Text(reading)
-                    .font(.custom("KosugiMaru-Regular", size: furiganaSize))
-                    .fontWeight(.semibold)
-                    .foregroundColor(textColor.opacity(0.8))
-                    .fixedSize()
-                
+        VStack(spacing: 0) {
+            // Pitch accent indicators above furigana/text
+            if token.hasPitchAccent {
+                PitchAccentView(
+                    token: token,
+                    fontSize: furiganaSize,
+                    baseWidth: token.needsFurigana ? nil : fontSize
+                )
+            }
+            
+            if token.needsFurigana, let reading = token.reading {
+                // Display with furigana above
+                VStack(spacing: 0) {
+                    Text(reading)
+                        .font(.custom("KosugiMaru-Regular", size: furiganaSize))
+                        .fontWeight(.semibold)
+                        .foregroundColor(textColor.opacity(0.8))
+                        .fixedSize()
+                    
+                    Text(token.text)
+                        .font(.custom("KosugiMaru-Regular", size: fontSize))
+                        .fontWeight(.bold)
+                        .foregroundColor(textColor)
+                        .fixedSize()
+                }
+            } else {
+                // Display without furigana (aligned with furigana text)
                 Text(token.text)
                     .font(.custom("KosugiMaru-Regular", size: fontSize))
                     .fontWeight(.bold)
                     .foregroundColor(textColor)
                     .fixedSize()
+                    .padding(.top, token.hasPitchAccent ? 0 : verticalPadding)
             }
+        }
+    }
+}
+
+// MARK: - Pitch Accent View
+
+/// Displays pitch accent indicators above/below text
+struct PitchAccentView: View {
+    let token: FuriganaToken
+    let fontSize: CGFloat
+    let baseWidth: CGFloat?
+    
+    private var accentLineHeight: CGFloat {
+        fontSize * 0.1
+    }
+    
+    private var accentLineSpacing: CGFloat {
+        fontSize * 0.05
+    }
+    
+    var body: some View {
+        if let pitchPattern = token.pitchPattern, !pitchPattern.isEmpty {
+            HStack(spacing: 0) {
+                ForEach(Array(pitchPattern.enumerated()), id: \.offset) { index, pitch in
+                    VStack(spacing: accentLineSpacing) {
+                        // High pitch indicator (line above)
+                        Rectangle()
+                            .fill(pitch == 1 ? Color.blue : Color.clear)
+                            .frame(width: characterWidth(for: index), height: accentLineHeight)
+                        
+                        // Space for the actual text
+                        Color.clear
+                            .frame(height: fontSize * 0.2)
+                        
+                        // Low pitch indicator (line below)  
+                        Rectangle()
+                            .fill(pitch == 0 ? Color.red : Color.clear)
+                            .frame(width: characterWidth(for: index), height: accentLineHeight)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func characterWidth(for index: Int) -> CGFloat {
+        if let baseWidth = baseWidth {
+            // For text without furigana, use proportional width based on base font
+            return baseWidth / CGFloat(token.pitchPattern?.count ?? 1)
         } else {
-            // Display without furigana (aligned with furigana text)
-            Text(token.text)
-                .font(.custom("KosugiMaru-Regular", size: fontSize))
-                .fontWeight(.bold)
-                .foregroundColor(textColor)
-                .fixedSize()
-                .padding(.top, verticalPadding)
+            // For text with furigana, use furigana font size as base
+            return fontSize * 0.8
         }
     }
 }
@@ -176,5 +238,6 @@ extension FuriganaToken: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(text)
         hasher.combine(reading)
+        hasher.combine(pitchAccent?.accentPosition)
     }
 }
