@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		521977052E4111F5007FD1C8 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 521977042E4111F5007FD1C8 /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +26,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				521977052E4111F5007FD1C8 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,7 +68,6 @@
 			);
 			name = Talkyo;
 			packageProductDependencies = (
-				521977042E4111F5007FD1C8 /* WhisperKit */,
 			);
 			productName = Talkyo;
 			productReference = 521976EF2E3E6373007FD1C8 /* Talkyo.app */;
@@ -101,7 +98,6 @@
 			mainGroup = 521976E62E3E6373007FD1C8;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				521977032E4111F5007FD1C8 /* XCRemoteSwiftPackageReference "WhisperKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 521976F02E3E6373007FD1C8 /* Products */;
@@ -341,22 +337,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		521977032E4111F5007FD1C8 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		521977042E4111F5007FD1C8 /* WhisperKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 521977032E4111F5007FD1C8 /* XCRemoteSwiftPackageReference "WhisperKit" */;
-			productName = WhisperKit;
-		};
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 521976E72E3E6373007FD1C8 /* Project object */;
