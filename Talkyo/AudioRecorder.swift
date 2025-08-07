@@ -58,11 +58,8 @@ final class AudioRecorder: NSObject {
         
         do {
             let session = AVAudioSession.sharedInstance()
-            let audioInterruptionMode = UserDefaults.standard.string(forKey: "audioInterruptionMode") ?? "duck"
-            let options: AVAudioSession.CategoryOptions = audioInterruptionMode == "duck" 
-                ? [.defaultToSpeaker, .duckOthers] 
-                : [.defaultToSpeaker]
-            try session.setCategory(.playAndRecord, mode: .default, options: options)
+            // Pause other audio during playback
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
             
             audioPlayer = try AVAudioPlayer(contentsOf: url)
@@ -107,11 +104,8 @@ final class AudioRecorder: NSObject {
     private func beginRecording(with engine: AVAudioEngine) {
         do {
             let session = AVAudioSession.sharedInstance()
-            let audioInterruptionMode = UserDefaults.standard.string(forKey: "audioInterruptionMode") ?? "duck"
-            let options: AVAudioSession.CategoryOptions = audioInterruptionMode == "duck" 
-                ? [.defaultToSpeaker, .duckOthers] 
-                : [.defaultToSpeaker]
-            try session.setCategory(.playAndRecord, mode: .default, options: options)
+            // Set category without duckOthers to pause other audio
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             print("Failed to activate audio session: \(error)")
