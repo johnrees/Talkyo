@@ -1,5 +1,5 @@
 import AVFoundation
-import UIKit
+import AudioToolbox
 import Observation
 
 @Observable
@@ -14,25 +14,26 @@ final class AudioRecorder: NSObject {
     
     var onAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
     
-    private let impactFeedback = UIImpactFeedbackGenerator()
-    private let notificationFeedback = UINotificationFeedbackGenerator()
-    
     private enum Config {
         static let sampleRate: Double = 16000
         static let bufferSize: AVAudioFrameCount = 2048
+        
+        enum Haptic {
+            static let start: SystemSoundID = 1519
+            static let stop: SystemSoundID = 1520
+            static let cancel: SystemSoundID = 1521
+        }
     }
     override init() {
         super.init()
         configureAudioSession()
         setupAudioEngine()
-        impactFeedback.prepare()
-        notificationFeedback.prepare()
     }
     func startRecording() {
         guard !isRecording else { return }
         
         prepareForRecording()
-        impactFeedback.impactOccurred(intensity: 0.5)
+        playHaptic(Config.Haptic.start)
         
         guard let engine = audioEngine else { return }
         beginRecording(with: engine)
@@ -41,7 +42,7 @@ final class AudioRecorder: NSObject {
         guard isRecording else { return [] }
         
         completeRecording()
-        notificationFeedback.notificationOccurred(.success)
+        playHaptic(Config.Haptic.stop)
         
         if !audioBuffer.isEmpty {
             saveRecording()
@@ -71,7 +72,7 @@ final class AudioRecorder: NSObject {
         guard isRecording else { return }
         
         completeRecording()
-        notificationFeedback.notificationOccurred(.warning)
+        playHaptic(Config.Haptic.cancel)
         
         audioBuffer.removeAll()
         recordedFileURL = nil
@@ -223,6 +224,9 @@ final class AudioRecorder: NSObject {
     private func generateRecordingURL() -> URL {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return documentsPath.appendingPathComponent("recording.wav")
+    }
+    private func playHaptic(_ hapticID: SystemSoundID) {
+        AudioServicesPlaySystemSound(hapticID)
     }
 }
 
