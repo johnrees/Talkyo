@@ -43,7 +43,15 @@
       "Bash(git checkout:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(git add:*)"
+      "Bash(mcp__XcodeBuildMCP__build_sim_name_proj:*)",
+      "Bash(xcrun simctl list:*)",
+      "Bash(xcrun simctl boot:*)",
+      "Bash(xcrun simctl install:*)",
+      "Bash(xcrun simctl launch:*)",
+      "Bash(xcrun simctl io:*)",
+      "Bash(xcrun simctl ui:*)",
+      "Bash(xcrun simctl device:*)",
+      "Bash(xcrun simctl spawn:*)",
     ],
     "deny": []
   }

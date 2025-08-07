@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Binding var selectedMode: SpeechRecognitionMode
     @Binding var transcriptionMode: TranscriptionMode
+    @Binding var debugModeEnabled: Bool
     let transcriptionService: TranscriptionService
     @Environment(\.dismiss) private var dismiss
     
@@ -12,6 +13,7 @@ struct SettingsView: View {
                 VStack(spacing: 16) {
                     transcriptionModeSelector
                     recognitionModeSelector
+                    debugModeToggle
                 }
                 .padding(.top, 40)
                 
@@ -64,6 +66,18 @@ struct SettingsView: View {
             .onChange(of: selectedMode) { _, newValue in
                 transcriptionService.setRecognitionMode(newValue)
             }
+        }
+    }
+    
+    private var debugModeToggle: some View {
+        VStack(spacing: 10) {
+            Text("Debug Mode")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Toggle("Show transcription timing", isOn: $debugModeEnabled)
+                .toggleStyle(SwitchToggleStyle())
+                .padding(.horizontal)
         }
     }
 }

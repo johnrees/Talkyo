@@ -34,6 +34,7 @@ struct ContentView: View {
     @State private var selectedMode = SpeechRecognitionMode.onDevice
     @State private var transcriptionMode = TranscriptionMode.standard
     @State private var showingSettings = false
+    @AppStorage("debugModeEnabled") private var debugModeEnabled = false
     
     var body: some View {
         NavigationStack {
@@ -43,7 +44,8 @@ struct ContentView: View {
                     furiganaTokens: transcriptionService.furiganaTokens,
                     processingTime: transcriptionService.transcriptionTime,
                     isLiveMode: transcriptionMode == .live,
-                    isRecording: isRecording
+                    isRecording: isRecording,
+                    showDebugInfo: debugModeEnabled
                 )
                 .padding(.top, 20)
                 
@@ -68,6 +70,7 @@ struct ContentView: View {
                 SettingsView(
                     selectedMode: $selectedMode,
                     transcriptionMode: $transcriptionMode,
+                    debugModeEnabled: $debugModeEnabled,
                     transcriptionService: transcriptionService
                 )
             }
@@ -164,6 +167,7 @@ struct TranscriptionDisplay: View {
     let processingTime: String
     let isLiveMode: Bool
     let isRecording: Bool
+    let showDebugInfo: Bool
     @State private var translationAvailable = false
     
     private let placeholderText = "話してください"
@@ -177,7 +181,7 @@ struct TranscriptionDisplay: View {
                     transcriptionContent
                 }
                 
-                if !processingTime.isEmpty {
+                if showDebugInfo && !processingTime.isEmpty {
                     performanceIndicator
                 }
             }
