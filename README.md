@@ -76,10 +76,21 @@ graph TD
     J --> L[FuriganaTextView]
     L --> M[FuriganaToken]
     
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style C fill:#bbf,stroke:#333,stroke-width:2px
-    style F fill:#bfb,stroke:#333,stroke-width:2px
-    style G fill:#bfb,stroke:#333,stroke-width:2px
+    click A "Talkyo/TalkyoApp.swift"
+    click B "Talkyo/ContentView.swift"
+    click C "Talkyo/TranscriptionService.swift"
+    click D "Talkyo/SettingsView.swift"
+    click F "Talkyo/AudioRecorder.swift"
+    click G "Talkyo/SpeechRecognizer.swift"
+    click H "Talkyo/FuriganaGenerator.swift"
+    click L "Talkyo/FuriganaTextView.swift"
+    click M "Talkyo/FuriganaToken.swift"
+    
+    style A fill:#e1bee7,stroke:#4a148c,stroke-width:2px,color:#000
+    style C fill:#bbdefb,stroke:#0d47a1,stroke-width:2px,color:#000
+    style F fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#000
+    style G fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#000
+    style H fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#000
 ```
 
 ### Core Files
