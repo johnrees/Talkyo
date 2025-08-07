@@ -43,8 +43,9 @@ Unlike the template structure in `.cursor/rules/swift-ios-project.mdc`, Talkyo c
 ### AudioRecorder.swift
 - Audio recording and playback (16kHz mono WAV)
 - Provides audio buffers for live transcription
-- Haptic feedback: Light (start), Medium (stop), Heavy (cancel)
+- Modern UIKit haptic feedback using UIImpactFeedbackGenerator and UINotificationFeedbackGenerator
 - Supports mid-capture cancellation
+- Audio session management with pause/resume for background audio
 
 ### FuriganaGenerator.swift
 - Generates hiragana readings for Japanese text
@@ -77,9 +78,9 @@ Unlike the template structure in `.cursor/rules/swift-ios-project.mdc`, Talkyo c
 ## Technical Details
 
 ### Audio Configuration
-- 16kHz mono WAV format
+- 16kHz mono WAV format optimized for speech recognition
 - Real-time audio buffer streaming for live mode
-- Haptic feedback system for user actions
+- Modern haptic feedback using UIKit generators for better user experience
 
 ### Speech Recognition
 - Japanese (ja-JP) with automatic punctuation
@@ -143,29 +144,24 @@ Unlike the template structure in `.cursor/rules/swift-ios-project.mdc`, Talkyo c
 - Minimum iOS 18.0 for latest features
 - Uses SwiftUI and Combine for reactive UI updates
 
-## Recent Updates
+## Code Quality Updates (2025 Best Practices)
 
-### Furigana Implementation (Completed)
-- Successfully implemented proper ruby text (furigana) display
-- Hiragana readings now appear directly above kanji characters
-- Uses SwiftUI approach for reliable and maintainable implementation
-- Proper alignment ensures clean visual presentation
+### Clean Architecture
+- Removed polling patterns in favor of proper @Observable property observation
+- Eliminated redundant code and duplicate method signatures
+- Consolidated related types into appropriate files (SpeechRecognitionResult moved to SpeechRecognizer)
+- Simplified configuration structures and removed unnecessary nesting
 
-### Font Integration (Completed)
-- Integrated KosugiMaru-Regular font for Japanese text display
-- Font registered in project settings via INFOPLIST_KEY_UIAppFonts
-- Applied bold weight to main text and semibold to furigana for improved readability
+### Modern Swift Patterns
+- Replaced deprecated AudioToolbox with UIKit haptic feedback generators
+- Added proper accessibility labels and hints for all interactive UI elements
+- Removed weak self where unnecessary in structured concurrency
+- Cleaned up imports and removed unused dependencies
 
-### Recording Improvements (Completed)
-- Swipe-to-cancel gesture for discarding recordings
-- Replaced audio beeps with haptic feedback
-- 0.2s delay after button release to prevent cutting off speech
-
-### Live Transcription (Completed)
-- Real-time transcription mode with streaming audio buffers
-- Toggle between Standard and Live transcription modes
-- Partial transcription updates during recording
-- Maintains all features (furigana, recognition modes) in both modes
+### Audio Session Management
+- Implemented proper audio interruption handling
+- Background audio pauses during recording and resumes after
+- Uses `.notifyOthersOnDeactivation` for seamless audio handoff
 
 ## Future Development
 

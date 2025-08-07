@@ -8,14 +8,15 @@ final class TranscriptionService {
     private(set) var furiganaTokens: [FuriganaToken] = []
     private(set) var transcriptionTime = ""
     private(set) var isTranscribing = false
-    private(set) var hasRecording = false
-    
     private let speechRecognizer = SpeechRecognizer()
     private let audioRecorder = AudioRecorder()
     private var transcriptionMode: TranscriptionMode = .standard
     
+    var hasRecording: Bool {
+        audioRecorder.hasRecording
+    }
+    
     init() {
-        setupObservers()
         setupSpeechRecognizerCallbacks()
     }
     
@@ -55,14 +56,6 @@ final class TranscriptionService {
         
         audioRecorder.cancelRecording()
         clearTranscription()
-    }
-    private func setupObservers() {
-        Task { [weak self] in
-            while true {
-                self?.hasRecording = self?.audioRecorder.hasRecording ?? false
-                try? await Task.sleep(nanoseconds: 100_000_000) // Check every 0.1s
-            }
-        }
     }
     private func setupSpeechRecognizerCallbacks() {
         speechRecognizer.onPartialTranscription = { [weak self] partialText in
@@ -121,16 +114,14 @@ final class TranscriptionService {
             let elapsedTime = Date().timeIntervalSince(startTime)
             
             updateTranscription(
-                text: result.text,
+                with: result.text,
+                isFinal: true,
                 mode: result.recognitionMode,
                 elapsedTime: elapsedTime
             )
         } catch {
             handleTranscriptionError(error)
         }
-    }
-    private func updateTranscription(text: String, mode: String, elapsedTime: TimeInterval) {
-        updateTranscription(with: text, isFinal: true, mode: mode, elapsedTime: elapsedTime)
     }
     private func updateTranscription(with text: String, isFinal: Bool, mode: String? = nil, elapsedTime: TimeInterval? = nil) {
         transcribedText = text
@@ -153,9 +144,4 @@ final class TranscriptionService {
         let milliseconds = Int(interval * 1000)
         return "\(milliseconds)ms (\(mode))"
     }
-}
-
-struct SpeechRecognitionResult: Sendable {
-    let text: String
-    let recognitionMode: String
 }

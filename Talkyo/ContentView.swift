@@ -64,6 +64,8 @@ struct ContentView: View {
                         Image(systemName: "gearshape.fill")
                             .font(.title2)
                     }
+                    .accessibilityLabel("Settings")
+                    .accessibilityHint("Opens app settings")
                 }
             }
             .sheet(isPresented: $showingSettings) {
@@ -310,6 +312,8 @@ struct RecordButton: View {
             .scaleEffect(isRecording ? 1.1 : 1.0)
             .animation(.easeInOut(duration: 0.2), value: isRecording)
             .animation(.easeInOut(duration: 0.15), value: isDraggingToCancel)
+            .accessibilityLabel(isRecording ? "Recording" : "Record")
+            .accessibilityHint("Hold to record, swipe away to cancel")
     }
     
     private var buttonIcon: String {
@@ -371,6 +375,8 @@ struct PlaybackButton: View {
                 .background(Color.green)
                 .cornerRadius(20)
         }
+        .accessibilityLabel("Play Recording")
+        .accessibilityHint("Plays the last recorded audio")
     }
 }
 

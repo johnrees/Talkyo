@@ -3,6 +3,11 @@ import Speech
 import AVFoundation
 import Observation
 
+struct SpeechRecognitionResult: Sendable {
+    let text: String
+    let recognitionMode: String
+}
+
 enum SpeechRecognitionError: LocalizedError {
     case recognizerUnavailable
     case recognitionFailed(String)

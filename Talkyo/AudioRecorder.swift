@@ -1,5 +1,5 @@
 import AVFoundation
-import AudioToolbox
+import UIKit
 import Observation
 
 @Observable
@@ -13,28 +13,26 @@ final class AudioRecorder: NSObject {
     private var audioBuffer: [Float] = []
     
     var onAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
+    
+    private let impactFeedback = UIImpactFeedbackGenerator()
+    private let notificationFeedback = UINotificationFeedbackGenerator()
+    
     private enum Config {
-        enum Audio {
-            static let sampleRate: Double = 16000
-            static let bufferSize: AVAudioFrameCount = 2048
-        }
-        
-        enum Haptic {
-            static let start: SystemSoundID = 1519
-            static let stop: SystemSoundID = 1520
-            static let cancel: SystemSoundID = 1521
-        }
+        static let sampleRate: Double = 16000
+        static let bufferSize: AVAudioFrameCount = 2048
     }
     override init() {
         super.init()
         configureAudioSession()
         setupAudioEngine()
+        impactFeedback.prepare()
+        notificationFeedback.prepare()
     }
     func startRecording() {
         guard !isRecording else { return }
         
         prepareForRecording()
-        playHaptic(Config.Haptic.start)
+        impactFeedback.impactOccurred(intensity: 0.5)
         
         guard let engine = audioEngine else { return }
         beginRecording(with: engine)
@@ -43,7 +41,7 @@ final class AudioRecorder: NSObject {
         guard isRecording else { return [] }
         
         completeRecording()
-        playHaptic(Config.Haptic.stop)
+        notificationFeedback.notificationOccurred(.success)
         
         if !audioBuffer.isEmpty {
             saveRecording()
@@ -73,7 +71,7 @@ final class AudioRecorder: NSObject {
         guard isRecording else { return }
         
         completeRecording()
-        playHaptic(Config.Haptic.cancel)
+        notificationFeedback.notificationOccurred(.warning)
         
         audioBuffer.removeAll()
         recordedFileURL = nil
@@ -122,7 +120,7 @@ final class AudioRecorder: NSObject {
         
         audioConverter = converter
         
-        inputNode.installTap(onBus: 0, bufferSize: Config.Audio.bufferSize, format: inputFormat) { [weak self] buffer, _ in
+        inputNode.installTap(onBus: 0, bufferSize: Config.bufferSize, format: inputFormat) { [weak self] buffer, _ in
             self?.processAudioBuffer(buffer)
             self?.onAudioBuffer?(buffer)
         }
@@ -191,7 +189,7 @@ final class AudioRecorder: NSObject {
     private func createRecordingFormat() -> AVAudioFormat? {
         AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
-            sampleRate: Config.Audio.sampleRate,
+            sampleRate: Config.sampleRate,
             channels: 1,
             interleaved: false
         )
@@ -203,7 +201,7 @@ final class AudioRecorder: NSObject {
         guard let format = createRecordingFormat() else { return nil }
         
         let frameCapacity = AVAudioFrameCount(
-            Double(sourceBuffer.frameLength) * Config.Audio.sampleRate / sourceBuffer.format.sampleRate
+            Double(sourceBuffer.frameLength) * Config.sampleRate / sourceBuffer.format.sampleRate
         )
         
         return AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity)
@@ -225,9 +223,6 @@ final class AudioRecorder: NSObject {
     private func generateRecordingURL() -> URL {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return documentsPath.appendingPathComponent("recording.wav")
-    }
-    private func playHaptic(_ hapticID: SystemSoundID) {
-        AudioServicesPlaySystemSound(hapticID)
     }
 }
 
