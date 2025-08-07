@@ -8,7 +8,7 @@ struct FuriganaTextView: View {
   var body: some View {
     FlexibleView(
       data: tokens,
-      spacing: 0,
+      spacing: 4,
       alignment: .center
     ) { token in
       FuriganaCharacterView(
@@ -79,7 +79,7 @@ struct FlexibleViewInternal<Data: Collection, Content: View>: View where Data.El
     for element in data {
       let elementSize = elementsSize[element] ?? CGSize(width: 50, height: 50)
 
-      if remainingWidth - elementSize.width >= 0 {
+      if remainingWidth - (elementSize.width + spacing) >= 0 {
         rows[currentRow].append(element)
         remainingWidth -= elementSize.width + spacing
       } else {
