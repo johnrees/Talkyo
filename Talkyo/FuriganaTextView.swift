@@ -20,7 +20,7 @@ struct FuriganaTextView: View {
     }
 }
 
-struct FlexibleView<Data: Collection, Content: View>: View where Data.Element: Hashable {
+struct FlexibleView<Data: Collection, Content: View>: View where Data.Element: Hashable & Identifiable {
     let data: Data
     let spacing: CGFloat
     let alignment: HorizontalAlignment
@@ -47,7 +47,7 @@ struct FlexibleView<Data: Collection, Content: View>: View where Data.Element: H
     }
 }
 
-struct FlexibleViewInternal<Data: Collection, Content: View>: View where Data.Element: Hashable {
+struct FlexibleViewInternal<Data: Collection, Content: View>: View where Data.Element: Hashable & Identifiable {
     let availableWidth: CGFloat
     let data: Data
     let spacing: CGFloat
@@ -58,9 +58,9 @@ struct FlexibleViewInternal<Data: Collection, Content: View>: View where Data.El
     
     var body: some View {
         VStack(alignment: alignment, spacing: 10) {
-            ForEach(computeRows(), id: \.self) { rowElements in
+            ForEach(Array(computeRows().enumerated()), id: \.offset) { _, rowElements in
                 HStack(spacing: spacing) {
-                    ForEach(rowElements, id: \.self) { element in
+                    ForEach(rowElements) { element in
                         content(element)
                             .readSize { size in
                                 elementsSize[element] = size

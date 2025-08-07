@@ -1,6 +1,7 @@
 import Foundation
 
-struct FuriganaToken: Equatable, Hashable, Sendable {
+struct FuriganaToken: Equatable, Hashable, Identifiable, Sendable {
+    let id = UUID()
     let text: String
     let reading: String?
     var needsFurigana: Bool {
