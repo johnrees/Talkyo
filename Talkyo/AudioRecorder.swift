@@ -57,6 +57,14 @@ final class AudioRecorder: NSObject {
               FileManager.default.fileExists(atPath: url.path) else { return }
         
         do {
+            let session = AVAudioSession.sharedInstance()
+            let audioInterruptionMode = UserDefaults.standard.string(forKey: "audioInterruptionMode") ?? "duck"
+            let options: AVAudioSession.CategoryOptions = audioInterruptionMode == "duck" 
+                ? [.defaultToSpeaker, .duckOthers] 
+                : [.defaultToSpeaker]
+            try session.setCategory(.playAndRecord, mode: .default, options: options)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.delegate = self
             audioPlayer?.play()
@@ -75,17 +83,8 @@ final class AudioRecorder: NSObject {
         hasRecording = false
     }
     private func configureAudioSession() {
-        let session = AVAudioSession.sharedInstance()
-        
         AVAudioApplication.requestRecordPermission { granted in
             guard granted else { return }
-            
-            do {
-                try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
-                try session.setActive(true)
-            } catch {
-                print("Audio session setup failed: \(error)")
-            }
         }
     }
     private func setupAudioEngine() {
@@ -108,8 +107,12 @@ final class AudioRecorder: NSObject {
     private func beginRecording(with engine: AVAudioEngine) {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
-            try session.setActive(true)
+            let audioInterruptionMode = UserDefaults.standard.string(forKey: "audioInterruptionMode") ?? "duck"
+            let options: AVAudioSession.CategoryOptions = audioInterruptionMode == "duck" 
+                ? [.defaultToSpeaker, .duckOthers] 
+                : [.defaultToSpeaker]
+            try session.setCategory(.playAndRecord, mode: .default, options: options)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             print("Failed to activate audio session: \(error)")
             return
@@ -147,6 +150,13 @@ final class AudioRecorder: NSObject {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         audioConverter = nil
+        
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Failed to deactivate audio session: \(error)")
+        }
     }
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard let converter = audioConverter,
@@ -228,5 +238,12 @@ final class AudioRecorder: NSObject {
 }
 
 extension AudioRecorder: AVAudioPlayerDelegate {
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {}
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Failed to deactivate audio session after playback: \(error)")
+        }
+    }
 }

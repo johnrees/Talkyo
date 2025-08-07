@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Binding var selectedMode: SpeechRecognitionMode
     @Binding var transcriptionMode: TranscriptionMode
     @Binding var debugModeEnabled: Bool
+    @AppStorage("audioInterruptionMode") var audioInterruptionMode = "duck"
     let transcriptionService: TranscriptionService
     @Environment(\.dismiss) private var dismiss
     
@@ -13,6 +14,7 @@ struct SettingsView: View {
                 VStack(spacing: 16) {
                     transcriptionModeSelector
                     recognitionModeSelector
+                    audioInterruptionToggle
                     debugModeToggle
                 }
                 .padding(.top, 40)
@@ -66,6 +68,21 @@ struct SettingsView: View {
             .onChange(of: selectedMode) { _, newValue in
                 transcriptionService.setRecognitionMode(newValue)
             }
+        }
+    }
+    
+    private var audioInterruptionToggle: some View {
+        VStack(spacing: 10) {
+            Text("Audio Interruption")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Picker("Audio Interruption", selection: $audioInterruptionMode) {
+                Text("Duck Audio").tag("duck")
+                Text("Pause Audio").tag("pause")
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
         }
     }
     
