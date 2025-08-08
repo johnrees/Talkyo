@@ -54,8 +54,6 @@ struct ContentView: View {
         controlButtons
           .padding(.bottom, 50)
       }
-      .navigationTitle("Talkyo")
-      .navigationBarTitleDisplayMode(.large)
       .toolbar {
         ToolbarItem(placement: .navigationBarTrailing) {
           Button {
