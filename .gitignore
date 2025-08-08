@@ -1,3 +1,5 @@
+/assets
+
 # Swift Package Manager
 .build/
 .swiftpm/
