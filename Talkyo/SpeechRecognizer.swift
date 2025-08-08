@@ -86,7 +86,7 @@ final class SpeechRecognizer: NSObject {
 
     request.shouldReportPartialResults = true
     request.addsPunctuation = true
-    request.taskHint = .dictation
+    request.taskHint = .confirmation
 
     configureRecognitionMode(for: request)
 
@@ -143,7 +143,7 @@ final class SpeechRecognizer: NSObject {
 
     request.shouldReportPartialResults = false
     request.addsPunctuation = true
-    request.taskHint = .dictation
+    request.taskHint = .confirmation
 
     configureRecognitionMode(for: request)
 
