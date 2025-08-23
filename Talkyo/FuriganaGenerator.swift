@@ -59,48 +59,78 @@ enum FuriganaGenerator {
     return splitMixedTokenByCharacterType(text: text, reading: reading)
   }
   private static func splitMixedTokenByCharacterType(text: String, reading: String) -> [FuriganaToken] {
-    // First, identify the structure of the word
-    var kanjiPart = ""
-    var kanaSuffix = ""
-    var isInKanaSuffix = false
+    // Split text into segments by character type (kanji vs kana)
+    var segments: [(text: String, isKanji: Bool)] = []
+    var currentSegment = ""
+    var currentIsKanji: Bool? = nil
 
-    // Build kanji part and kana suffix
     for char in text {
-      if !isInKanaSuffix && isKanji(char) {
-        kanjiPart.append(char)
-      } else if isHiragana(char) || isKatakana(char) {
-        isInKanaSuffix = true
-        kanaSuffix.append(char)
-      } else if isInKanaSuffix {
-        // If we hit a non-kana character after starting the suffix, append to suffix
-        kanaSuffix.append(char)
+      let charIsKanji = isKanji(char)
+
+      if let prevIsKanji = currentIsKanji, prevIsKanji != charIsKanji {
+        // Character type changed, save current segment
+        segments.append((text: currentSegment, isKanji: prevIsKanji))
+        currentSegment = String(char)
+        currentIsKanji = charIsKanji
       } else {
-        // Non-kanji, non-kana character before any kana
-        kanjiPart.append(char)
+        currentSegment.append(char)
+        currentIsKanji = charIsKanji
       }
     }
 
-    // If we have a kana suffix, remove it from the reading
-    var kanjiReading = reading
-    if !kanaSuffix.isEmpty && reading.hasSuffix(kanaSuffix) {
-      kanjiReading = String(reading.dropLast(kanaSuffix.count))
+    // Add the last segment
+    if !currentSegment.isEmpty, let isKanji = currentIsKanji {
+      segments.append((text: currentSegment, isKanji: isKanji))
     }
 
-    // Build result tokens
+    // Now match the reading to the segments
     var result: [FuriganaToken] = []
+    var readingChars = Array(reading)
+    var readingIndex = 0
 
-    if !kanjiPart.isEmpty {
-      // Only add furigana if there are actual kanji characters
-      let needsReading = kanjiPart.contains { isKanji($0) }
-      result.append(
-        FuriganaToken(
-          text: kanjiPart,
-          reading: needsReading && !kanjiReading.isEmpty ? kanjiReading : nil
-        ))
-    }
+    for (i, segment) in segments.enumerated() {
+      if segment.isKanji {
+        // For kanji segments, we need to figure out their reading
+        // Look for the next kana segment to use as boundary
+        let nextKanaSegment = segments.dropFirst(i + 1).first(where: { !$0.isKanji })
 
-    if !kanaSuffix.isEmpty {
-      result.append(FuriganaToken(text: kanaSuffix, reading: nil))
+        if let nextKana = nextKanaSegment {
+          // Find where this kana appears in the remaining reading
+          let remainingReading = String(readingChars[readingIndex...])
+          if let kanaIndex = remainingReading.firstIndex(of: nextKana.text.first!) {
+            let offset = remainingReading.distance(from: remainingReading.startIndex, to: kanaIndex)
+            // Check if the full kana segment matches
+            let potentialMatch = String(
+              readingChars[readingIndex..<min(readingIndex + offset + nextKana.text.count, readingChars.count)])
+            if potentialMatch.hasSuffix(nextKana.text) {
+              // The reading for this kanji is everything up to where the kana starts
+              let kanjiReading = String(readingChars[readingIndex..<readingIndex + offset])
+              result.append(FuriganaToken(text: segment.text, reading: kanjiReading.isEmpty ? nil : kanjiReading))
+              readingIndex = readingIndex + offset
+            } else {
+              // Couldn't match properly, give this segment the remaining reading
+              let kanjiReading = String(readingChars[readingIndex...])
+              result.append(FuriganaToken(text: segment.text, reading: kanjiReading.isEmpty ? nil : kanjiReading))
+              readingIndex = readingChars.count
+            }
+          } else {
+            // Kana not found, this kanji gets all remaining reading
+            let kanjiReading = String(readingChars[readingIndex...])
+            result.append(FuriganaToken(text: segment.text, reading: kanjiReading.isEmpty ? nil : kanjiReading))
+            readingIndex = readingChars.count
+          }
+        } else {
+          // No more kana segments, this kanji gets the rest of the reading
+          let kanjiReading = String(readingChars[readingIndex...])
+          result.append(FuriganaToken(text: segment.text, reading: kanjiReading.isEmpty ? nil : kanjiReading))
+          readingIndex = readingChars.count
+        }
+      } else {
+        // For kana segments, no furigana needed
+        result.append(FuriganaToken(text: segment.text, reading: nil))
+        // Advance reading index past this kana
+        readingIndex = min(readingIndex + segment.text.count, readingChars.count)
+      }
     }
 
     return result
