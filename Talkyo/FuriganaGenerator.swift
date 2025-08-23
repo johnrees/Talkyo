@@ -59,74 +59,51 @@ enum FuriganaGenerator {
     return splitMixedTokenByCharacterType(text: text, reading: reading)
   }
   private static func splitMixedTokenByCharacterType(text: String, reading: String) -> [FuriganaToken] {
-    let trimmedReading = removeMatchingSuffixFromReading(originalText: text, reading: reading)
+    // First, identify the structure of the word
+    var kanjiPart = ""
+    var kanaSuffix = ""
+    var isInKanaSuffix = false
 
-    var result: [FuriganaToken] = []
-    var currentSegment = ""
-    var currentType: CharacterType?
-
+    // Build kanji part and kana suffix
     for char in text {
-      let charType = getCharacterType(char)
-
-      if let existingType = currentType, existingType != charType {
-        let token = createTokenForSegment(
-          text: currentSegment,
-          type: existingType,
-          fullReading: trimmedReading,
-          originalText: text
-        )
-        result.append(token)
-        currentSegment = String(char)
-        currentType = charType
+      if !isInKanaSuffix && isKanji(char) {
+        kanjiPart.append(char)
+      } else if isHiragana(char) || isKatakana(char) {
+        isInKanaSuffix = true
+        kanaSuffix.append(char)
+      } else if isInKanaSuffix {
+        // If we hit a non-kana character after starting the suffix, append to suffix
+        kanaSuffix.append(char)
       } else {
-        currentSegment += String(char)
-        currentType = charType
+        // Non-kanji, non-kana character before any kana
+        kanjiPart.append(char)
       }
     }
 
-    if !currentSegment.isEmpty, let type = currentType {
-      let token = createTokenForSegment(
-        text: currentSegment,
-        type: type,
-        fullReading: trimmedReading,
-        originalText: text
-      )
-      result.append(token)
+    // If we have a kana suffix, remove it from the reading
+    var kanjiReading = reading
+    if !kanaSuffix.isEmpty && reading.hasSuffix(kanaSuffix) {
+      kanjiReading = String(reading.dropLast(kanaSuffix.count))
+    }
+
+    // Build result tokens
+    var result: [FuriganaToken] = []
+
+    if !kanjiPart.isEmpty {
+      // Only add furigana if there are actual kanji characters
+      let needsReading = kanjiPart.contains { isKanji($0) }
+      result.append(
+        FuriganaToken(
+          text: kanjiPart,
+          reading: needsReading && !kanjiReading.isEmpty ? kanjiReading : nil
+        ))
+    }
+
+    if !kanaSuffix.isEmpty {
+      result.append(FuriganaToken(text: kanaSuffix, reading: nil))
     }
 
     return result
-  }
-  private static func removeMatchingSuffixFromReading(originalText: String, reading: String) -> String {
-    var suffixLength = 0
-    let textArray = Array(originalText)
-
-    for i in stride(from: textArray.count - 1, through: 0, by: -1) {
-      let char = textArray[i]
-      if isHiragana(char) || isKatakana(char) {
-        suffixLength += 1
-      } else {
-        break
-      }
-    }
-
-    if suffixLength > 0 {
-      let suffix = String(textArray.suffix(suffixLength))
-      if reading.hasSuffix(suffix) {
-        return String(reading.dropLast(suffix.count))
-      }
-    }
-
-    return reading
-  }
-  private static func createTokenForSegment(
-    text: String, type: CharacterType, fullReading: String, originalText: String
-  ) -> FuriganaToken {
-    switch type {
-    case .kanji:
-      return FuriganaToken(text: text, reading: fullReading.isEmpty ? nil : fullReading)
-    case .hiragana, .katakana, .other:
-      return FuriganaToken(text: text, reading: nil)
-    }
   }
   private static func textRequiresFurigana(_ text: String) -> Bool {
     text.contains { isKanji($0) || isKatakana($0) }
@@ -158,23 +135,6 @@ enum FuriganaGenerator {
     CFStringTransform(hiraganaReading, nil, kCFStringTransformLatinHiragana, false)
 
     return hiraganaReading as String
-  }
-  private enum CharacterType {
-    case kanji
-    case hiragana
-    case katakana
-    case other
-  }
-  private static func getCharacterType(_ character: Character) -> CharacterType {
-    if isKanji(character) {
-      return .kanji
-    } else if isHiragana(character) {
-      return .hiragana
-    } else if isKatakana(character) {
-      return .katakana
-    } else {
-      return .other
-    }
   }
   private static func isKanji(_ character: Character) -> Bool {
     guard let unicodeScalar = character.unicodeScalars.first else {
